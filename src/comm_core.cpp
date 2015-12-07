@@ -1030,16 +1030,21 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	op_server->num_threads++;
 	comm_log("Read handler up %d", op_server->num_threads);
 	if(0 == op_server->clients->length()){
+		comm_log("Listening ...");
 		if ( listen(op_server->server_sock->get_sock_fd(), 1) < 0 ) {
 			comm_log("listen failed");
 			return;
 		}
 	}
 
+
+	comm_log("Start Selecting server and clients");
 	if(select(op_server->max_fd+1, &(op_server->readfds), NULL, NULL, NULL) < 0){
 		comm_log("select error");
 		return;
 	}
+	comm_log("Selecting server and clients");
+
 
 	do{
 		//If server sock has data, then accept new client
@@ -1311,6 +1316,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	return;
 
 READ_CLIENT_SOCKET_CLOSE:
+	comm_log("Read Client Socket Close Section:");
 	if(err_cli_pos == -1){
 		comm_log("No error client but jumped here?");
 		return;
