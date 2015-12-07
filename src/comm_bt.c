@@ -2,7 +2,7 @@
 extern "C"{
 #endif
 
-#define BT_DEBUG 1
+#define BT_DEBUG 0
 
 #include <errno.h>
 #include <stdlib.h>
