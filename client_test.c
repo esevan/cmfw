@@ -10,6 +10,7 @@ OPEL_Client *cli = NULL;
 void handler(OPEL_MSG *op_msg, int status)
 {
 	char *haha = "Hello MSG";
+	printf("Handler has been called\n");
 	if(NULL == op_msg)
 		printf("noop!\n", status);
 

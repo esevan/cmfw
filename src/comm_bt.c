@@ -2,7 +2,7 @@
 extern "C"{
 #endif
 
-#define BT_DEBUG 0
+#define BT_DEBUG 1
 
 #include <errno.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@ int bt_dynamic_bind_rc(int sock)
 	sockaddr.rc_bdaddr = *BDADDR_ANY;
 	sockaddr.rc_channel = (uint8_t) 0;
 	
-	for ( tmp_port = 1; tmp_port < 31; tmp_port++ ){
+	for ( tmp_port = 4; tmp_port < 31; tmp_port++ ){
 		sockaddr.rc_channel = tmp_port;
 		err = bind(sock, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_rc));
 		if( !err ){
@@ -155,15 +155,13 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 	sdp_uuid128_create( &svc_uuid, &uuid);
 	search_list = sdp_list_append(NULL, &svc_uuid);
 
+	char bdad[256];
 	for (i=0; i<num_rsp; i++){
-		char bdad[256];
 		ba2str(&(ii+i)->bdaddr, bdad);
 		if(BT_DEBUG)
 			printf("connecting:%s\n", bdad);
-		if(!BT_DEBUG)
-			session = sdp_connect(BDADDR_ANY, &((ii+i)->bdaddr), SDP_RETRY_IF_BUSY);
-		else
-			session = sdp_connect(BDADDR_ANY, BDADDR_LOCAL, SDP_RETRY_IF_BUSY);
+		session = sdp_connect(BDADDR_ANY, &((ii+i)->bdaddr), SDP_RETRY_IF_BUSY);
+		//session = sdp_connect(BDADDR_ANY, BDADDR_LOCAL, SDP_RETRY_IF_BUSY);
 		if(NULL == session){
 			if(BT_DEBUG)
 				printf("session not connected\n");
@@ -225,10 +223,8 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 			printf("rfcomm channel has been connected %d\n", rfcomm_channel);
 		addr.rc_family = AF_BLUETOOTH;
 		addr.rc_channel = rfcomm_channel;
-		if(!BT_DEBUG)
-			addr.rc_bdaddr = (ii+i)->bdaddr;
-		else
-			addr.rc_bdaddr = *BDADDR_LOCAL;
+		str2ba(bdad, &addr.rc_bdaddr);
+	//	addr.rc_bdaddr = *BDADDR_LOCAL;
 
 		status = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
 
@@ -243,6 +239,8 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 	else{
 		if(BT_DEBUG)
 			printf("T_T no rfcomm channel found : %d\n", rfcomm_channel);
+
+		err = -BT_E_FAIL;
 
 	}
 
