@@ -30,7 +30,6 @@ void name2uuid(IN char inputString[], OUT unsigned int outUuid[])
 	for(x=0; x<4; x++){
 		outUuid[x] = (unsigned int)inputString[x*4] | (unsigned int)inputString[x*4+1] << 8\
 					 | (unsigned int)inputString[x*4+2] << 16 | (unsigned int)inputString[x*4+3] << 24;
-	printf("uuid : %u\n", outUuid[x]);
 	}
 
 }
