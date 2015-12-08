@@ -19,6 +19,11 @@ void handler(OPEL_MSG *op_msg, int status)
 		printf("Write!\n");
 		cli->msg_write(haha, strlen(haha)+1);
 	}
+
+	if(status == SOCKET_ERR_DISCON){
+		if(NULL != cli) delete cli;
+		cli = new OPEL_Client(intf_name, rhandler, handler):
+	}
 }
 void rhandler(OPEL_MSG *op_msg, int status)
 {
