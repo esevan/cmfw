@@ -1910,6 +1910,7 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 		comm_log("Connected! %d:%s", op_client->serv_sock->get_sock_fd(), buf);
 		FD_SET(op_client->serv_sock->get_sock_fd(), &op_client->readfds);
 		op_client->max_fd = op_client->serv_sock->get_sock_fd();
+		op_client->serv_sock->get();
 		op_client->connected = TRUE;
 
 		uv_queue_work(uv_default_loop(), &op_client->read_req,\
@@ -1930,7 +1931,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
 	OPEL_Socket *serv_sock = op_client->serv_sock;
 	op_client->num_threads++;
-	comm_log("Read Thread generated");
+	comm_log("Read Thread generated %d", op_client->num_threads);
 	fd_set readfds = op_client->readfds;
 
 	do{
@@ -2154,20 +2155,19 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	}while(0);
 
 	if(SOCKET_ERR_NONE != err){
-		queue_data_t *qdt = new queue_data_t(serv_sock);
+		FD_CLR(op_client->serv_sock->get_sock_fd(), &op_client->readfds);
+		op_client->connected = 0;
+		queue_data_t *qdt = new queue_data_t();
 		OPEL_MSG *op_msg = qdt->op_msg;
 		op_msg->set_err(SOCKET_ERR_DISCON);
 		struct sockaddr_rc rem_addr = {0};
 		socklen_t opt = sizeof(rem_addr);
 		char *buf = (char *)malloc(BUFF_SIZE);
-
-		getpeername(serv_sock->get_sock_fd(),\
-				(struct sockaddr *)&rem_addr, &opt);
-		ba2str(&rem_addr.rc_bdaddr, buf);
-		strcat(buf, " is disconnected");
+				
 		op_msg->set_data((uint8_t *)buf, BUFF_SIZE);
 		comm_log("Euqnueing %x", qdt);
 		op_client->read_queue.enqueue(qdt);
+
 	}
 }
 
