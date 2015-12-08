@@ -7,6 +7,8 @@
 char *intf_name = "Test Interface";
 OPEL_Client *cli = NULL;
 
+void handler(OPEL_MSG *op_msg, int status);
+void rhandler(OPEL_MSG *op_msg, int status);
 void handler(OPEL_MSG *op_msg, int status)
 {
 	char *haha = "Hello MSG";
@@ -20,9 +22,9 @@ void handler(OPEL_MSG *op_msg, int status)
 		cli->msg_write(haha, strlen(haha)+1);
 	}
 
-	if(status == SOCKET_ERR_DISCON){
+	if(status == SOCKET_ERR_DISCON || status == -SOCKET_ERR_DISCON){
 		if(NULL != cli) delete cli;
-		cli = new OPEL_Client(intf_name, rhandler, handler):
+		cli = new OPEL_Client(intf_name, rhandler, handler);
 	}
 }
 void rhandler(OPEL_MSG *op_msg, int status)
