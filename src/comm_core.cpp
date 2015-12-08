@@ -155,8 +155,10 @@ bool OPEL_MSG::is_msg()
 }
 bool OPEL_MSG::is_ack()
 {
-	if(!op_header->isInitialized())
+	if(!op_header->isInitialized()){
+		comm_log("Not inited");
 		return FALSE;
+	}
 	return (PACKET_TYPE_ACK == op_header->type);
 }
 uint32_t OPEL_MSG::get_file_offset()
