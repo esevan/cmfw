@@ -33,11 +33,11 @@ void rhandler(OPEL_MSG *op_msg, int status)
 	printf("rHandler has been called\n");
 	if(!status){
 		printf("Error : %d\n", status);
-		return;
 	}
 	if(NULL == op_msg)
 		printf("noop!\n", status);
 	printf("%s\n", op_msg->get_data());
+	cli->msg_write("hihihi");
 }
 
 int main()
