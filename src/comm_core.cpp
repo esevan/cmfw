@@ -1994,7 +1994,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				break;
 			}
 
-			com_log("Succeeded initialization of header....");
+			comm_log("Succeeded initialization of header....");
 			if(op_msg->is_file()){
 				FILE *fp_tmp;
 				uint8_t *data;
