@@ -7,44 +7,61 @@
 char *intf_name = "Test Interface";
 OPEL_Client *cli = NULL;
 
-void handler(OPEL_MSG *op_msg, int status);
-void rhandler(OPEL_MSG *op_msg, int status);
-void handler(OPEL_MSG *op_msg, int status)
-{
-	char *haha = "Hello MSG";
-	printf("Handler has been called\n");
-	if(NULL == op_msg)
-		printf("noop!%d\n", status);
-
-	if(NULL != op_msg) {
-		printf("%s\n", (char *)op_msg->get_data());
-		if(strcmp((char *)op_msg->get_data(), "hihi")){
-			cli->msg_write("oh ho", 6, op_msg);
-		}
-	}
-	if(!status){
-		printf("Write!\n");
-		cli->msg_write(haha, strlen(haha)+1);
-	}
-
-}
-void rhandler(OPEL_MSG *op_msg, int status)
-{
-	printf("rHandler has been called\n");
-	if(!status){
-		printf("Error : %d\n", status);
-	}
-	if(NULL == op_msg)
-		printf("noop!\n", status);
-	printf("%s\n", op_msg->get_data());
-	cli->msg_write("Hello again", strlen("Hello again")+1);
-}
+void onConnect(OPEL_MSG *op_msg, int status);
+void onRead(OPEL_MSG *op_msg, int status);
+void onAck(OPEL_MSG *op_msg, int status);
 
 int main()
 {
-	cli = new OPEL_Client(intf_name, rhandler, handler);
+	cli = new OPEL_Client(intf_name, onRead, onConnect);
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 	sleep(30);
 	printf("Done\n");
 	return 0;
+}
+
+void onConnect(OPEL_MSG *op_msg, int status)
+{
+	if(!status){
+		char send_str[] = "First Msg from client";
+		printf("Connect Succedded\n");
+		cli->msg_write(send_str, strlen(send_str)+1);
+	}
+	else{
+		printf("Connect Failed(%d)\n", status);
+		delete cli;
+		cli = new OPEL_Client(intf_name, onRead, onConnect);
+	}
+}
+void onRead(OPEL_MSG *op_msg, int status)
+{
+	if(NULL == op_msg){
+		printf("OP_MSG = NULL\n");
+		return;
+	}
+	if(!status){
+		printf("Got Msg:%s\n", (char *)op_msg->get_data());
+		if(!strcmp((char *)op_msg->get_data(), "Message for ack test")){
+			char send_str[] = "Ack message from client";
+			printf("Sending %s\n", send_str);
+			cli->msg_write(send_str, strlen(send_str)+1, op_msg, NULL);
+		}
+		else{
+			char send_str[] = "Req message from client";
+			printf("Sending %s\n", send_str);
+			cli->msg_write(send_str, strlen(send_str)+1, NULL, onAck);
+		}
+	}
+	else{
+		printf("Read Failed(%d)\n", status);
+		exit(1);
+	}
+}
+void onAck(OPEL_MSG *op_msg, int status)
+{
+	printf("OnAck called\n");
+	if(!status && NULL != op_msg)
+		printf("Got data : %s\n", (char *)op_msg->get_data());
+	else
+		printf("Failed\n");
 }
