@@ -1982,7 +1982,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					break;
 				}
 			}
-			com_log("Init from header...");
+			comm_log("Init from header...");
 
 			if(COMM_S_OK != op_header->init_from_buff(buff)){
 				comm_log("Failed to initialized header");
