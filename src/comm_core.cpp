@@ -1814,7 +1814,6 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 	connected = FALSE;
 
 	serv_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
-	dynamic_sock_get(&serv_sock);
 	cvs = new cv_set();
 
 	connect_req.data = (void *)this;
@@ -1859,7 +1858,6 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 	connected = FALSE;
 
 	serv_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
-	dynamic_sock_get(&serv_sock);
 	cvs = new cv_set();
 
 	connect_req.data = (void *)this;
@@ -1876,8 +1874,9 @@ OPEL_Client::~OPEL_Client()
 	uv_cancel((uv_req_t *)&read_req);
 	uv_cancel((uv_req_t *)&write_req);
 
-	if(NULL != serv_sock)
+	if(NULL != serv_sock){
 		delete serv_sock;
+	}
 	if(NULL != bt_ops)
 		delete bt_ops;
 	if(NULL != cvs)

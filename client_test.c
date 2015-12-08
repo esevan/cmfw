@@ -16,7 +16,11 @@ void handler(OPEL_MSG *op_msg, int status)
 	if(NULL == op_msg)
 		printf("noop!%d\n", status);
 
-	if(NULL != op_msg) printf("%s\n", (char *)op_msg->get_data());
+	if(NULL != op_msg) {
+		printf("%s\n", (char *)op_msg->get_data());
+		if(strcmp((char *)op_msg->get_data(), "hihi")){
+			cli->msg_write("oh ho", 6, op_msg);
+		}
 	if(!status){
 		printf("Write!\n");
 		cli->msg_write(haha, strlen(haha)+1);

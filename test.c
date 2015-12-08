@@ -8,6 +8,11 @@
 char *intf_name = "Test Interface";
 OPEL_Server *ser = NULL;
 
+void second_handler(OPEL_MSG *op_msg, int status)
+{
+	printf("Second handler called\n");
+	return;
+}
 void handler(OPEL_MSG *op_msg, int status)
 {
 	printf("Server handler has been called\n");
@@ -15,6 +20,7 @@ void handler(OPEL_MSG *op_msg, int status)
 		printf("Wow %d\n", status);
 
 	printf("%s\n", (char *)op_msg->get_data());
+	ser->msg_write("hihi", 5, op_msg, second_handler);
 }
 int main()
 {
