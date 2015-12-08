@@ -239,6 +239,7 @@ queue_data_t::queue_data_t(OPEL_Socket *op_sock)
 	buff_len = 0;
 	attached = FALSE;
 	handler = NULL;
+	buff = NULL;
 }
 queue_data_t::~queue_data_t()
 {
