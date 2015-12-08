@@ -721,15 +721,12 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 		if(pos < 0)
 			break;
 
-		comm_log("insert lock");
 		uv_mutex_lock(&cv_mutex[pos]);
-		comm_log("insert lock passed");
 		cv_bitmap |= 0x01 << pos;
 		req[pos] = reqid;
 		handlers[pos] = handler;
 		status[pos] = CV_STAT_READY;
 		uv_mutex_unlock(&cv_mutex[pos]);
-		comm_log("insert lock released");
 
 	}while(0);
 
@@ -745,9 +742,7 @@ int cv_set::remove(uint32_t reqid)
 		if(cv_len == 0)
 			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
-			comm_log("Remove lock");
 			uv_mutex_lock(&cv_mutex[i]);
-			comm_log("Remove lock passed");
 			if(reqid == req[i]){
 				if(status[i] == CV_STAT_WAIT){
 					uv_cond_signal(&cv[i]);
@@ -761,7 +756,6 @@ int cv_set::remove(uint32_t reqid)
 				status[i] = CV_STAT_INIT;
 			}
 			uv_mutex_unlock(&cv_mutex[i]);
-			comm_log("Remove lock released");
 			if(res != -1){
 				if(!wt) cv_len--;
 				break;
@@ -780,9 +774,7 @@ int cv_set::gc(void)
 		if(cv_len == 0)
 			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
-			comm_log("gc lock");
 			uv_mutex_lock(&cv_mutex[i]);
-			comm_log("gc lock passed");
 			if(status[i] == CV_STAT_REM){
 				req[i] = 0;
 				res = 0;
@@ -791,7 +783,6 @@ int cv_set::gc(void)
 				status[i] = CV_STAT_INIT;
 			}
 			uv_mutex_unlock(&cv_mutex[i]);
-			comm_log("gc lock released");
 		}
 		if(res != -1)
 			break;
@@ -805,9 +796,7 @@ int cv_set::search(uint32_t reqid, uint8_t *stat=NULL)
 	int i, res = -1;
 	uv_mutex_lock(&cv_bitmap_mutex);
 	for(i=0; i<MAX_REQ_LEN; i++){
-			comm_log("search lock");
 		uv_mutex_lock(&cv_mutex[i]);
-			comm_log("search lock passed");
 		if(reqid == req[i]){
 			res = i;
 			if(NULL != stat){
@@ -815,7 +804,6 @@ int cv_set::search(uint32_t reqid, uint8_t *stat=NULL)
 			}
 		}
 		uv_mutex_unlock(&cv_mutex[i]);
-			comm_log("search lock released");
 		if(res != -1)
 			break;
 	}
@@ -870,20 +858,17 @@ int cv_set::wait(int i, uint32_t timeout)
 	if(i < 0 || i >= MAX_REQ_LEN)
 		return res;
 
-			comm_log("wait lock");
 	uv_mutex_lock(&cv_mutex[i]);
-			comm_log("wait lock passed");
 	if(status[i] == CV_STAT_READY){
 		res = 0;
 		status[i] = CV_STAT_WAIT;
-			comm_log("wait lock wait");
+		comm_log("Wait");
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
-			comm_log("wait lock wait done");
+		comm_log("Wait done%d", tmout);
 		status[i] = CV_STAT_REM;
 		uv_cond_signal(&notWaiting[i]);
 	}
-	uv_mutex_unlock(&cv_mutex[res]);
-			comm_log("wait lock released");
+	uv_mutex_unlock(&cv_mutex[i]);
 
 	if(res != -1){
 		uv_mutex_lock(&cv_bitmap_mutex);
@@ -905,20 +890,20 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 
 	comm_log("1lock");
 	uv_mutex_lock(&cv_mutex[res]);
-	comm_log("1lock passed");
 	for(i=0; i<MAX_REQ_LEN; i++){
-		comm_log("2lock");
 		uv_mutex_lock(&cv_mutex[i]);
-		comm_log("2lock passed");
 		if(reqid == req[i]){
 			res = -2;
-			if(CV_STAT_INIT != status[i]){
+			if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
 				res = i;
 				if(NULL != queue_data){
 					queue_data->handler = handlers[i];
-					if(NULL != queue)
+					if(NULL != queue){
 						if(COMM_S_OK != queue->enqueue(queue_data))
 							res = -1;
+						else
+							comm_log("queue inserted");
+					}
 				}
 				if(CV_STAT_READY == status[i]){
 					// NO need to wait but remove this cv
@@ -2535,9 +2520,6 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 	if(res >= 0)
 		cvs->gc();
 
-	if(res == 1){
-	}
-
 }
 void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 {
@@ -2552,13 +2534,17 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 		return;
 
 	queue_data = op_client->ack_queue.dequeue();
-	if(NULL == queue_data)
+	if(NULL == queue_data){
+		comm_log("No queue_data");
 		return;
+	}
 
 	op_msg = queue_data->op_msg;
 
-	if(queue_data->handler)
+	if(queue_data->handler){
+		comm_log("Calling handler");
 		queue_data->call_handler();
+	}
 	else
 		if(NULL != op_client->client_handler)
 			op_client->client_handler(op_msg, op_msg->get_err());
