@@ -1037,9 +1037,9 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		}
 	}
 
-
+	fd_set readfds = op_server->readfds;
 	comm_log("Start Selecting server and clients");
-	if(select(op_server->max_fd+1, &(op_server->readfds), NULL, NULL, NULL) < 0){
+	if(select(op_server->max_fd+1, readfds, NULL, NULL, NULL) < 0){
 		comm_log("select error:%s(%d)", strerror(errno), errno);
 		return;
 	}
@@ -1048,7 +1048,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 	do{
 		//If server sock has data, then accept new client
-		if(FD_ISSET(op_server->server_sock->get_sock_fd(), &op_server->readfds)){
+		if(FD_ISSET(op_server->server_sock->get_sock_fd(), &readfds)){
 			struct sockaddr_rc rem_addr = { 0 };
 			socklen_t opt = sizeof(rem_addr);
 			char buf[BUFF_SIZE];
@@ -1103,7 +1103,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			dynamic_sock_get(&op_socket);
 		}
 	
-		res = FD_ISSET(op_socket->get_sock_fd(), &op_server->readfds);
+		res = FD_ISSET(op_socket->get_sock_fd(), &readfds);
 
 		if( 0 == res ){
 			comm_log("Not selected");
@@ -1943,9 +1943,10 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	OPEL_Socket *serv_sock = op_client->serv_sock;
 	op_client->num_threads++;
 	comm_log("Read Thread generated");
+	fd_set readfds = op_client->readfds;
 
 	do{
-		if(select(op_client->max_fd+1, &op_client->readfds, NULL, NULL, NULL) < 0){
+		if(select(op_client->max_fd+1, readfds, NULL, NULL, NULL) < 0){
 			comm_log("select error");
 			err = SOCKET_ERR_FAIL;
 			break;				
@@ -1957,7 +1958,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			break;
 		}
 
-		if(FD_ISSET(serv_sock->get_sock_fd(), &op_client->readfds)){
+		if(FD_ISSET(serv_sock->get_sock_fd(), readfds)){
 			int rCount;
 			uint8_t buff[OPEL_HEADER_SIZE];
 			OPEL_Header *op_header = NULL;
