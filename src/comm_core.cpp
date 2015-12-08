@@ -1103,7 +1103,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 			}
 			/* Greeting? */
-			wirte(new_client_fd, "hoho", 5);
+			write(new_client_fd, "hoho", 5);
 		}
 	}while(0);
 
