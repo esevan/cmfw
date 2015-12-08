@@ -965,7 +965,7 @@ OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
 
 	strncpy(this->intf_name, intf_name, MAX_NAME_LEN);
 
-	server_handler = serv_handler;
+	this->server_handler = serv_handler;
 
 	closing = 0;
 
@@ -1301,14 +1301,13 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		if(!op_msg->is_ack()){	// There's no write wating for this read.
 			comm_log("This will be handled at default handler");
 			if(NULL != op_server->server_handler){//case 1 : Process in user-defined server handler.
-				//uv_mutex_lock(&read_queue_mutex);
-				//comm_queue_insert_tail(&read_queue, queue_data->queue);
-				//uv_mutex_unlock(&read_queue_mutex);
+				comm_log("Server handler exists");
 				int ins_err = (op_server->read_queue).enqueue(queue_data);
 				if(ins_err != COMM_S_OK){
 					if(!queue_data->attached) delete queue_data;
 					comm_log("Noop");
 				}
+				comm_log("Enqueued to read queue"0;
 
 				dynamic_sock_put(&op_socket);
 
