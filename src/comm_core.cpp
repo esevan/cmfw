@@ -1886,7 +1886,7 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 
 		op_client->onConnect(NULL, 0);
 
-		uv_queue_work(uv_default_loop(), &op_client->connect_req,\
+		uv_queue_work(uv_default_loop(), &op_client->read_req,\
 				generic_read_handler, \
 				after_read_handler);
 	}

@@ -20,6 +20,7 @@ int main()
 	ser = new OPEL_Server(intf_name, handler);
 
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+	sleep(30);
 
 	return 0;
 }

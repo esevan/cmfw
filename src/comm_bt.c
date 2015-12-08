@@ -24,7 +24,7 @@ int bt_dynamic_bind_rc(int sock)
 	sockaddr.rc_bdaddr = *BDADDR_ANY;
 	sockaddr.rc_channel = (uint8_t) 0;
 	
-	for ( tmp_port = 2; tmp_port < 31; tmp_port++ ){
+	for ( tmp_port = 1; tmp_port < 31; tmp_port++ ){
 		sockaddr.rc_channel = tmp_port;
 		err = bind(sock, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_rc));
 		if( !err ){
