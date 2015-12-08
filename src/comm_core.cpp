@@ -461,7 +461,7 @@ int OPEL_Socket::Write(IN uint8_t *buff, IN int size)
 	if(FALSE == get())
 		return -1;
 	wCount = write(sock, buff, size);
-	res = put()
+	res = put();
 	if(size > 0 && wCount <= 0){
 		return wCount;
 	}
