@@ -425,22 +425,21 @@ bool OPEL_Socket::put()
 int OPEL_Socket::Read(OUT uint8_t *buff, IN int size)
 {
 	int rCount = 0;
-	if(FALSE == get())
+	if(FALSE == get()){
+		comm_log("Get socket failed");
 		return -1;
+	}
 	rCount = read(sock, buff, size);
-	if(rCount < 0)
+	if(rCount < 0){
+		comm_log("Read failed %s", strerror(errno));
 		return -1;
+	}
 	if(rCount == 0)
 		return 0;
-	while(rCount < size){
-		int tmpRCount;
-		tmpRCount = read(sock, buff+rCount, size - rCount);
-		if(tmpRCount <= 0)
-			return -1;
-		rCount += tmpRCount;
-	}
-	if(FALSE == put())
+	if(FALSE == put()){
+		comm_log("Put socket failed");
 		return -1;
+	}
 
 	return rCount;
 }
