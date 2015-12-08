@@ -1975,7 +1975,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					break;
 				}
 				else{
-					comm_log("Read error");
+					comm_log("Read error %d/%d", rCount, OPEL_HEADER_SIZE);
 					err = SOCKET_ERR_FAIL;
 					break;
 				}
