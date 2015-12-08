@@ -1038,7 +1038,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	comm_log("Read handler up %d", op_server->num_threads);
 	if(0 == op_server->clients->length()){
 		comm_log("Listening ...");
-		if ( listen(op_server->server_sock->get_sock_fd(), 1) < 0 ) {
+		if ( listen(op_server->server_sock->get_sock_fd(), MAX_CLIENTS) < 0 ) {
 			comm_log("listen failed");
 			return;
 		}
