@@ -1999,7 +1999,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				FILE *fp_tmp;
 				uint8_t *data;
 				char fname[256];
-				comm("It's file");
+				comm_log("It's file");
 
 				if(MAX_DAT_LEN < op_msg->get_data_len()){
 					comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)",\
@@ -2088,7 +2088,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			}
 			else{
 				uint8_t *data;
-				comm("It's msg");
+				comm_log("It's msg");
 				if(MAX_MSG_LEN < op_msg->get_data_len()){
 					comm_log("Received message length is greater than MAX_MSG_LEN");
 					if(!queue_data->attached) delete queue_data;
