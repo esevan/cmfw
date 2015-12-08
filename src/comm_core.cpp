@@ -1290,7 +1290,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				op_msg->set_data(data, rCount);
 			}
 
-			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 		}
 
 		// Check the request ID for sync write
@@ -1654,6 +1653,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 		}
 	}
 	wval = op_socket->Write(queue_data->buff, queue_data->buff_len);
+	comm_log("%d/%d written", wval, queue_data->buff_len);
 	if(wval < (int)queue_data->buff_len){
 		err = SOCKET_ERR_FAIL;
 
@@ -1953,6 +1953,8 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			queue_data_t *queue_data = NULL;
 			OPEL_MSG *op_msg = NULL;
 
+			comm_log("selected");
+
 			queue_data = new queue_data_t(serv_sock);
 			if(NULL == queue_data){
 				comm_log("Memory allocation failed");
@@ -1980,6 +1982,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					break;
 				}
 			}
+			com_log("Init from header...");
 
 			if(COMM_S_OK != op_header->init_from_buff(buff)){
 				comm_log("Failed to initialized header");
@@ -1991,10 +1994,12 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				break;
 			}
 
+			com_log("Succeeded initialization of header....");
 			if(op_msg->is_file()){
 				FILE *fp_tmp;
 				uint8_t *data;
 				char fname[256];
+				comm("It's file");
 
 				if(MAX_DAT_LEN < op_msg->get_data_len()){
 					comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)",\
@@ -2083,6 +2088,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			}
 			else{
 				uint8_t *data;
+				comm("It's msg");
 				if(MAX_MSG_LEN < op_msg->get_data_len()){
 					comm_log("Received message length is greater than MAX_MSG_LEN");
 					if(!queue_data->attached) delete queue_data;
@@ -2111,6 +2117,8 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							break;
 						}
 					}
+					else
+						comm_log("%s MSG received", op_msg->get_data());
 					op_msg->set_data(data, op_msg->get_data_len());
 				}
 			}
