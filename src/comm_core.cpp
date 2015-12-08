@@ -1307,7 +1307,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					if(!queue_data->attached) delete queue_data;
 					comm_log("Noop");
 				}
-				comm_log("Enqueued to read queue"0;
+				comm_log("Enqueued to read queue"0);
 
 				dynamic_sock_put(&op_socket);
 
