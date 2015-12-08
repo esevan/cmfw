@@ -248,8 +248,11 @@ queue_data_t::~queue_data_t()
 		comm_log("deleted op_msg");
 
 	}
-	if(NULL != buff)
+	if(NULL != buff){
+		comm_log("Is this problem?");
 		free(buff);
+		comm_log("No?");
+	}
 }
 void queue_data_t::call_handler(void)
 {
@@ -2011,7 +2014,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				}
 				else{
 					comm_log("Read error %d/%d", rCount, OPEL_HEADER_SIZE);
-
+					
 					delete queue_data;
 					comm_log("deleted?");
 					err = SOCKET_ERR_FAIL;
