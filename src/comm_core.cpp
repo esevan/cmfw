@@ -1417,7 +1417,7 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 	if(NULL == req_msg)
 		op_socket = clients->get(cli_no);
 	else
-		op_socket = req_msg->op_socket;
+		op_socket = req_msg->get_op_sock();
 	if(op_socket == NULL){
 		comm_log("Invalid client");
 		return -COMM_E_INVALID_PARAM;
