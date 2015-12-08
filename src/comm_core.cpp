@@ -1421,7 +1421,6 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		comm_log("Invalid client");
 		return -COMM_E_INVALID_PARAM;
 	}
-	dynamic_sock_get(&op_socket);
 
 	/* Fill out MSG */
 	queue_data = new queue_data_t(op_socket);
@@ -1443,7 +1442,6 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 	if(NULL == data){
 		comm_log("Malloc failed");
 		delete(queue_data);
-		dynamic_sock_put(&op_socket);
 		return -COMM_E_POINTER;
 	}
 	memcpy(data, buf, len);
@@ -1470,7 +1468,6 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 	}
 
-	dynamic_sock_put(&op_socket);
 
 	return COMM_S_OK;
 }
@@ -1522,7 +1519,6 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		comm_log("Invalid client");
 		return -COMM_E_INVALID_PARAM;
 	}
-	dynamic_sock_get(&op_socket);
 
 	/* Fill out File info and data */
 	queue_data = new queue_data_t(op_socket);
@@ -1593,7 +1589,6 @@ int OPEL_Server::file_write(IN const char *filePath, \
 	if(empty)
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 
-	dynamic_sock_put(&op_socket);
 
 	return COMM_S_OK;
 }
