@@ -1039,7 +1039,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 	fd_set readfds = op_server->readfds;
 	comm_log("Start Selecting server and clients");
-	if(select(op_server->max_fd+1, readfds, NULL, NULL, NULL) < 0){
+	if(select(op_server->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
 		comm_log("select error:%s(%d)", strerror(errno), errno);
 		return;
 	}
@@ -1946,7 +1946,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	fd_set readfds = op_client->readfds;
 
 	do{
-		if(select(op_client->max_fd+1, readfds, NULL, NULL, NULL) < 0){
+		if(select(op_client->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
 			comm_log("select error");
 			err = SOCKET_ERR_FAIL;
 			break;				
@@ -1958,7 +1958,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			break;
 		}
 
-		if(FD_ISSET(serv_sock->get_sock_fd(), readfds)){
+		if(FD_ISSET(serv_sock->get_sock_fd(), &readfds)){
 			int rCount;
 			uint8_t buff[OPEL_HEADER_SIZE];
 			OPEL_Header *op_header = NULL;
