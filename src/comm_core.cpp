@@ -1088,8 +1088,10 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		OPEL_Header *op_header = NULL;
 		queue_data_t *queue_data = NULL;
 		OPEL_MSG *op_msg = NULL;
-
 	
+		if(i>0 && op_server->clients->get(i-1))
+			comm_log("%d socket has been handled : %d", i-1, op_server->clients->get(i-1)->get_ref_cnt());
+
 		op_socket = op_server->clients->get(i);
 		if(NULL == op_socket){
 			continue;
@@ -1098,10 +1100,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			comm_log("%d Socket checking!", i);
 			dynamic_sock_get(&op_socket);
 		}
-		if(i>0 && op_server->clients->get(i-1))
-			comm_log("%d socket has been handled : %d", i-1, op_server->clients->get(i-1)->get_ref_cnt());
-
-
+	
 		res = FD_ISSET(op_socket->get_sock_fd(), &op_server->readfds);
 
 		if( 0 == res ){
@@ -1290,6 +1289,9 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					err_cli_pos = i;
 					goto READ_CLIENT_SOCKET_CLOSE;
 				}
+				else
+					comm_log("msg : %s received", (char *)data);
+				op_msg->set_data(data, rCount);
 			}
 
 			dynamic_sock_put(&op_socket);
