@@ -1652,6 +1652,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			fclose(fp_file);
 		}
 	}
+	comm_log("Writing to socket ... %s", op_msg->is_msg()? (char *)op_msg->get_data():"This is File");
 	wval = op_socket->Write(queue_data->buff, queue_data->buff_len);
 	comm_log("%d/%d written", wval, queue_data->buff_len);
 	if(wval < (int)queue_data->buff_len){
@@ -2094,7 +2095,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				if(!op_msg->is_msg())
 					comm_log("It's msg?????");
 				else
-					comm_log("It's msg");
+					comm_log("It's msg:%d", op_msg->get_data_len());
 				if(MAX_MSG_LEN < op_msg->get_data_len()){
 					comm_log("Received message length is greater than MAX_MSG_LEN");
 					if(!queue_data->attached) delete queue_data;
