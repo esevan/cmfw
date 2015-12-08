@@ -88,8 +88,10 @@ OPEL_MSG::OPEL_MSG(OPEL_Socket *op_sock)
 }
 OPEL_MSG::~OPEL_MSG()
 {
-	if(NULL != op_sock)
+	if(NULL != op_sock){
+		comm_log("refcnt: %d", op_sock->get_ref_cnt());
 		dynamic_sock_put(&op_sock);
+	}
 	delete op_header;
 	if(NULL != data)
 		free(data);
