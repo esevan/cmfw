@@ -1307,12 +1307,13 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					if(!queue_data->attached) delete queue_data;
 					comm_log("Noop");
 				}
-				comm_log("Enqueued to read queue"0);
+				comm_log("Enqueued to read queue");
 
 				dynamic_sock_put(&op_socket);
 
 				continue;
 			}
+			comm_log("No server handler exists, droped the data");
 		}
 		else {
 			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
