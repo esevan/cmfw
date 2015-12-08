@@ -1091,18 +1091,25 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		OPEL_MSG *op_msg = NULL;
 
 		op_socket = op_server->clients->get(i);
-		if(NULL == op_socket)
+		if(NULL == op_socket){
+			comm_log("%d Socket has not been allocated", i);
 			continue;
-		else
+		}
+		else{
+			comm_log("%d Socket checking!", i);
 			dynamic_sock_get(&op_socket);
+		}
 
 
 		res = FD_ISSET(op_socket->get_sock_fd(), &op_server->readfds);
 
 		if( 0 == res ){
+			comm_log("Not selected");
 			dynamic_sock_put(&op_socket);
 			continue;
 		}
+		else 
+			comm_log("Selected");
 
 		queue_data = new queue_data_t(op_socket);
 		if(NULL == queue_data){
@@ -1110,10 +1117,13 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			exit(1);
 		}
 
+		comm_log("Initializing queue data to read...");
 		op_msg = queue_data->op_msg;
 		op_header = op_msg->get_header();
 
+		comm_log("Start to read header");
 		rCount = op_socket->Read(buff, OPEL_HEADER_SIZE);
+		comm_log("Read Done %d/%d ", rCount, OPEL_HEADER_SIZE);
 
 		if(rCount < 0){
 			comm_log("Selected, but read error");
@@ -1136,6 +1146,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			goto READ_CLIENT_SOCKET_CLOSE;
 		}
 
+		comm_log("Initializing header...");
 		if(COMM_S_OK != op_header->init_from_buff(buff)){
 			comm_log("Failed to initialize header");
 			dynamic_sock_put(&op_socket);
@@ -1146,6 +1157,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			err_cli_pos = i;
 			goto READ_CLIENT_SOCKET_CLOSE;
 		}
+		comm_log("Initialization succedded");
 
 
 		if(op_msg->is_file()){
