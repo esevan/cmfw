@@ -161,7 +161,7 @@ bool OPEL_MSG::is_ack()
 			res = TRUE;
 	}
 
-	return TRUE;
+	return res;
 }
 uint32_t OPEL_MSG::get_file_offset()
 {
