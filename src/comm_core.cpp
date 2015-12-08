@@ -2124,9 +2124,10 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							break;
 						}
 					}
-					else
+					else{
+						op_msg->set_data(data, op_msg->get_data_len());
 						comm_log("%s MSG received", (char *)op_msg->get_data());
-					op_msg->set_data(data, op_msg->get_data_len());
+					}
 				}
 			}
 
