@@ -2134,6 +2134,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				}
 			}
 
+			comm_log("isAck()?%d", op_msg->is_ack());
 			if(!op_msg->is_ack()){
 				if(NULL != op_client->client_handler){
 					int ins_err = op_client->read_queue.enqueue(queue_data);
