@@ -2193,6 +2193,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 		ba2str(&rem_addr.rc_bdaddr, buf);
 		strcat(buf, " is disconnected");
 		op_msg->set_data((uint8_t *)buf, BUFF_SIZE);
+		comm_log("Euqnueing %x", qdt);
 		op_client->read_queue.enqueue(qdt);
 	}
 }
@@ -2223,7 +2224,7 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 			op_client->client_handler(queue_data->op_msg, queue_data->op_msg->get_err());
 
 		if(!queue_data->attached){
-			comm_log("Do you say this?");
+			comm_log("Do you say this?%x", queue_data);
 			delete queue_data;
 			comm_log("Do you say this?");
 		}
