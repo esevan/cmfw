@@ -1369,6 +1369,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 {
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
 	op_server->num_threads--;
+	comm_log("read handler down %d", op_server->num_threads);
 	if(UV_ECANCELED == status)
 		return;
 	while(TRUE){

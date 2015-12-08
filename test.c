@@ -10,6 +10,7 @@ OPEL_Server *ser = NULL;
 
 void handler(OPEL_MSG *op_msg, int status)
 {
+	printf("Server handler has been called\n");
 	if(NULL == op_msg)
 		printf("Wow %d\n", status);
 

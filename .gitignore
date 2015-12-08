@@ -1,3 +1,4 @@
 *.o
 test
-client_test
+cli_test
+auto_git.sh
