@@ -1440,6 +1440,7 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		op_msg->set_req_id(req_msg->get_req_id());
 		op_msg->set_msg(NULL);
 		op_msg->set_ack();
+		comm_log("set_Ack %d", op_msg->is_ack());
 	}
 
 	data = (uint8_t *)malloc(len);
