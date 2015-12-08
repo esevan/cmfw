@@ -1036,42 +1036,26 @@ OPEL_Server::~OPEL_Server()
 void OPEL_Server::generic_read_handler(uv_work_t *req)
 {
 	int err_cli_pos = -1;
+	static int first_listen = 0;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
 	op_server->num_threads++;
 	comm_log("Read handler up %d", op_server->num_threads);
-	if(0 == op_server->clients->length()){
+	if(!first_listen && 0 == op_server->clients->length()){
 		comm_log("Listening ...");
 		if ( listen(op_server->server_sock->get_sock_fd(), MAX_CLIENTS) < 0 ) {
 			comm_log("listen failed");
 			return;
 		}
+		first_listen = 1;
 	}
 
 	fd_set readfds = op_server->readfds;
-	fd_set errfds;
-	int i;
-	FD_ZERO(&errfds);
-	for(i=0; i<op_server->max_fd+1; i++){
-		printf("%d", FD_ISSET(i, &readfds)? 1:0);
-	}
-	printf("\n");
 	comm_log("Start Selecting server and clients");
-	if(select(op_server->max_fd+1, &readfds, NULL, &errfds, NULL) < 0){
+	if(select(op_server->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
 		comm_log("select error:%s(%d)", strerror(errno), errno);
-		for(i=0; i<op_server->max_fd+1; i++){
-			printf("%d", FD_ISSET(i, &errfds)? 1:0);
-		}
-		printf("\n");
 		return;
 	}
 	comm_log("Selecting server and clients");
-	for(i=0; i<op_server->max_fd+1; i++){
-			printf("%d", FD_ISSET(i, &readfds)? 1:0);
-		}
-		printf("\n");
-
-
-
 	do{
 		//If server sock has data, then accept new client
 		if(FD_ISSET(op_server->server_sock->get_sock_fd(), &readfds)){
