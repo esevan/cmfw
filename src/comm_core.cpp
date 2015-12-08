@@ -1440,7 +1440,6 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		op_msg->set_req_id(req_msg->get_req_id());
 		op_msg->set_msg(NULL);
 		op_msg->set_ack();
-		comm_log("set_Ack %d", op_msg->is_ack());
 	}
 
 	data = (uint8_t *)malloc(len);
@@ -1451,7 +1450,7 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 	}
 	memcpy(data, buf, len);
 	op_msg->set_data(data, len);
-
+	comm_log("set_Ack %d", op_msg->is_ack());
 	if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
 		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
