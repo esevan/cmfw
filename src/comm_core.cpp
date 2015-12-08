@@ -1068,7 +1068,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 
 			ba2str(&rem_addr.rc_bdaddr, buf);
-			comm_log("Accepted connection from %s\n", buf, new_client_sock);
+			comm_log("Accepted connection from %s\n", buf, new_client_fd);
 			memset(buf, 0, sizeof(buf));
 
 			if(op_server->clients->insert(new_client_fd, CONNECTION_TYPE_BT) >= 0){
