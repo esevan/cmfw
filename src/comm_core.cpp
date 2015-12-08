@@ -712,6 +712,7 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 	}
 
 	uv_mutex_lock(&cv_bitmap_mutex);
+
 	do{
 		if(cv_len == MAX_REQ_LEN)
 			break;
@@ -720,12 +721,16 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 		if(pos < 0)
 			break;
 
+		comm_log("insert lock");
 		uv_mutex_lock(&cv_mutex[pos]);
+		comm_log("insert lock passed");
 		cv_bitmap |= 0x01 << pos;
 		req[pos] = reqid;
 		handlers[pos] = handler;
 		status[pos] = CV_STAT_READY;
 		uv_mutex_unlock(&cv_mutex[pos]);
+		comm_log("insert lock released");
+
 	}while(0);
 
 	uv_mutex_unlock(&cv_bitmap_mutex);
@@ -740,7 +745,9 @@ int cv_set::remove(uint32_t reqid)
 		if(cv_len == 0)
 			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
+			comm_log("Remove lock");
 			uv_mutex_lock(&cv_mutex[i]);
+			comm_log("Remove lock passed");
 			if(reqid == req[i]){
 				if(status[i] == CV_STAT_WAIT){
 					uv_cond_signal(&cv[i]);
@@ -754,6 +761,7 @@ int cv_set::remove(uint32_t reqid)
 				status[i] = CV_STAT_INIT;
 			}
 			uv_mutex_unlock(&cv_mutex[i]);
+			comm_log("Remove lock released");
 			if(res != -1){
 				if(!wt) cv_len--;
 				break;
@@ -772,7 +780,9 @@ int cv_set::gc(void)
 		if(cv_len == 0)
 			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
+			comm_log("gc lock");
 			uv_mutex_lock(&cv_mutex[i]);
+			comm_log("gc lock passed");
 			if(status[i] == CV_STAT_REM){
 				req[i] = 0;
 				res = 0;
@@ -781,6 +791,7 @@ int cv_set::gc(void)
 				status[i] = CV_STAT_INIT;
 			}
 			uv_mutex_unlock(&cv_mutex[i]);
+			comm_log("gc lock released");
 		}
 		if(res != -1)
 			break;
@@ -794,7 +805,9 @@ int cv_set::search(uint32_t reqid, uint8_t *stat=NULL)
 	int i, res = -1;
 	uv_mutex_lock(&cv_bitmap_mutex);
 	for(i=0; i<MAX_REQ_LEN; i++){
+			comm_log("search lock");
 		uv_mutex_lock(&cv_mutex[i]);
+			comm_log("search lock passed");
 		if(reqid == req[i]){
 			res = i;
 			if(NULL != stat){
@@ -802,6 +815,7 @@ int cv_set::search(uint32_t reqid, uint8_t *stat=NULL)
 			}
 		}
 		uv_mutex_unlock(&cv_mutex[i]);
+			comm_log("search lock released");
 		if(res != -1)
 			break;
 	}
@@ -814,12 +828,16 @@ int cv_set::signal(uint32_t reqid)
 	int i, res = -1;
 	uv_mutex_lock(&cv_bitmap_mutex);
 	for(i=0; i<MAX_REQ_LEN; i++){
+			comm_log("signal lock");
 		uv_mutex_lock(&cv_mutex[i]);
+			comm_log("signal lock");
+			comm_log("signal lock released");
 		if(reqid == req[i]){
 			res = i;
 			uv_cond_signal(&cv[i]);
 		}
 		uv_mutex_unlock(&cv_mutex[i]);
+			comm_log("signal lock released");
 		if(res != -1)
 			break;
 	}
@@ -831,12 +849,15 @@ int cv_set::getHandler(uint32_t reqid, Comm_Handler *handler_p)
 	int i, res = -1;
 	uv_mutex_lock(&cv_bitmap_mutex);
 	for(i=0; i<MAX_REQ_LEN; i++){
+			comm_log("handler lock");
 		uv_mutex_lock(&cv_mutex[i]);
+			comm_log("handler lock released");
 		if(reqid == req[i]){
 			res = i;
 			*handler_p = handlers[i];
 		}
 		uv_mutex_unlock(&cv_mutex[i]);
+			comm_log("handler lock released");
 		if(res != -1)
 			break;
 	}
@@ -849,15 +870,20 @@ int cv_set::wait(int i, uint32_t timeout)
 	if(i < 0 || i >= MAX_REQ_LEN)
 		return res;
 
+			comm_log("wait lock");
 	uv_mutex_lock(&cv_mutex[i]);
+			comm_log("wait lock passed");
 	if(status[i] == CV_STAT_READY){
 		res = 0;
 		status[i] = CV_STAT_WAIT;
+			comm_log("wait lock wait");
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
+			comm_log("wait lock wait done");
 		status[i] = CV_STAT_REM;
 		uv_cond_signal(&notWaiting[i]);
 	}
 	uv_mutex_unlock(&cv_mutex[res]);
+			comm_log("wait lock released");
 
 	if(res != -1){
 		uv_mutex_lock(&cv_bitmap_mutex);
