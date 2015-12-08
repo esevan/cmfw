@@ -433,23 +433,23 @@ bool OPEL_Socket::put()
 int OPEL_Socket::Read(OUT uint8_t *buff, IN int size)
 {
 	int rCount = 0;
-	int res;
-	if(FALSE == get()){
-		comm_log("Get socket failed");
-		return -1;
-	}
+	//int res;
+	//if(FALSE == get()){
+		//comm_log("Get socket failed");
+		//return -1;
+	//}
 	rCount = read(sock, buff, size);
-	res = put();
+	//res = put();
 	if(rCount < 0){
 		comm_log("Read failed %s", strerror(errno));
 		return -1;
 	}
 	if(rCount == 0)
 		return 0;
-	if(FALSE == res){
-		comm_log("Put socket failed");
-		return -1;
-	}
+	//if(FALSE == res){
+		//comm_log("Put socket failed");
+		//return -1;
+	//}
 
 	return rCount;
 }
@@ -457,17 +457,17 @@ int OPEL_Socket::Read(OUT uint8_t *buff, IN int size)
 int OPEL_Socket::Write(IN uint8_t *buff, IN int size)
 {
 	int wCount = 0;
-	int res;
-	if(FALSE == get())
-		return -1;
+	//int res;
+	//if(FALSE == get())
+		//return -1;
 	wCount = write(sock, buff, size);
-	res = put();
+	//res = put();
 	if(size > 0 && wCount <= 0){
 		return wCount;
 	}
 
-	if(FALSE == res)
-		return -1;
+	//if(FALSE == res)
+		//return -1;
 
 	return wCount;
 }
