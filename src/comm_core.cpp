@@ -1038,7 +1038,12 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	}
 
 	fd_set readfds = op_server->readfds;
-	comm_log("Start Selecting server and clients");
+	int i;
+	for(i=0; i<FD_SETSIZE; i++){
+		printf("%d", FD_ISSET(i, &readfds)? 1:0);
+	}
+	printf("\n");
+	comm_log("Start Selecting server and clients:%x", readfds);
 	if(select(op_server->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
 		comm_log("select error:%s(%d)", strerror(errno), errno);
 		return;
