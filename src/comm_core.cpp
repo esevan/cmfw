@@ -1049,12 +1049,17 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	if(select(op_server->max_fd+1, &readfds, NULL, &errfds, NULL) < 0){
 		comm_log("select error:%s(%d)", strerror(errno), errno);
 		for(i=0; i<op_server->max_fd+1; i++){
-			printf("%d", FD_ISSET(i, &readfds)? 1:0);
+			printf("%d", FD_ISSET(i, &errfds)? 1:0);
 		}
 		printf("\n");
 		return;
 	}
 	comm_log("Selecting server and clients");
+	for(i=0; i<op_server->max_fd+1; i++){
+			printf("%d", FD_ISSET(i, &readfds)? 1:0);
+		}
+		printf("\n");
+
 
 
 	do{
