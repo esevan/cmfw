@@ -89,7 +89,6 @@ OPEL_MSG::OPEL_MSG(OPEL_Socket *op_sock)
 OPEL_MSG::~OPEL_MSG()
 {
 	if(NULL != op_sock){
-		comm_log("refcnt: %d", op_sock->get_ref_cnt());
 		dynamic_sock_put(&op_sock);
 	}
 	delete op_header;
@@ -1306,7 +1305,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 				comm_log("Enqueued to read queue");
 
-			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 
 				continue;
 			}
@@ -1319,7 +1317,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			   Too late ack.
 			 */
 			if(req_err < 0){
-			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				if(!queue_data->attached) delete queue_data;
 				else
 					comm_log("tried to delete, but attached");
