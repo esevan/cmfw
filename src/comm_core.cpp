@@ -1043,6 +1043,8 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			return;
 		}
 	}
+	else
+		sleep(30);
 
 	fd_set readfds = op_server->readfds;
 	fd_set errfds;
@@ -1970,7 +1972,6 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	fd_set readfds = op_client->readfds;
 
 	do{
-		sleep(10);
 		if(select(op_client->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
 			comm_log("select error");
 			err = SOCKET_ERR_FAIL;
