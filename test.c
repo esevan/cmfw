@@ -20,7 +20,7 @@ void handler(OPEL_MSG *op_msg, int status)
 		printf("Wow %d\n", status);
 
 	printf("%s\n", (char *)op_msg->get_data());
-	ser->msg_write("hihi", 5, op_msg, second_handler);
+	ser->msg_write("hihi", 5, NULL, NULL,0);
 }
 int main()
 {
