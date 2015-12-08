@@ -23,7 +23,7 @@ int main()
 void default_read_handler(OPEL_MSG *op_msg, int status)
 {
 	static int test_cnt = 0;
-	printf("Here is defulat server read handlerServer handler has been called\n");
+	printf("default_read_hnadler\n");
 
 	if(NULL == op_msg){
 		printf("OP_msg = NULL\n");

@@ -1312,6 +1312,8 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		}
 		else {
 			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
+			comm_log("Ack comes(%d)", req_err);
+
 			/*
 			   Ack comes, but no request wating.
 			   Too late ack.
@@ -1412,13 +1414,17 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		return -COMM_E_INVALID_PARAM;
 	}
 
-	op_socket = clients->get(cli_no);
+	if(NULL == req_msg)
+		op_socket = clients->get(cli_no);
+	else
+		op_socket = req_msg->op_socket;
 	if(op_socket == NULL){
 		comm_log("Invalid client");
 		return -COMM_E_INVALID_PARAM;
 	}
 
 	/* Fill out MSG */
+
 	queue_data = new queue_data_t(op_socket);
 	op_msg = queue_data->op_msg;
 

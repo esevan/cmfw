@@ -22,6 +22,7 @@ int main()
 
 void onConnect(OPEL_MSG *op_msg, int status)
 {
+	printf("OnConnect\n");
 	if(!status){
 		char send_str[] = "First Msg from client";
 		printf("Connect Succedded\n");
@@ -35,6 +36,7 @@ void onConnect(OPEL_MSG *op_msg, int status)
 }
 void onRead(OPEL_MSG *op_msg, int status)
 {
+	printf("OnRead\n");
 	if(NULL == op_msg){
 		printf("OP_MSG = NULL\n");
 		return;
