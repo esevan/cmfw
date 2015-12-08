@@ -2010,7 +2010,9 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				}
 				else{
 					comm_log("Read error %d/%d", rCount, OPEL_HEADER_SIZE);
+
 					delete queue_data;
+					comm_log("deleted?");
 					err = SOCKET_ERR_FAIL;
 					break;
 				}
