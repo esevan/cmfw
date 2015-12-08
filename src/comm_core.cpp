@@ -1038,14 +1038,20 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	}
 
 	fd_set readfds = op_server->readfds;
+	fd_set errfds;
 	int i;
-	for(i=0; i<FD_SETSIZE; i++){
+	FD_ZERO(errfds);
+	for(i=0; i<op_server->max_fd+1; i++){
 		printf("%d", FD_ISSET(i, &readfds)? 1:0);
 	}
 	printf("\n");
-	comm_log("Start Selecting server and clients:%x", readfds);
-	if(select(op_server->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
+	comm_log("Start Selecting server and clients");
+	if(select(op_server->max_fd+1, &readfds, NULL, &errfds, NULL) < 0){
 		comm_log("select error:%s(%d)", strerror(errno), errno);
+		for(i=0; i<op_server->max_fd+1; i++){
+			printf("%d", FD_ISSET(i, &readfds)? 1:0);
+		}
+		printf("\n");
 		return;
 	}
 	comm_log("Selecting server and clients");
@@ -1086,7 +1092,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			/* Greeting? */
 		}
 	}while(0);
-	
+
 	for (int i = 0; i < MAX_CLIENTS; i++){
 		int rCount;
 		int res;
@@ -1095,7 +1101,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		OPEL_Header *op_header = NULL;
 		queue_data_t *queue_data = NULL;
 		OPEL_MSG *op_msg = NULL;
-	
+
 		if(i>0 && op_server->clients->get(i-1))
 			comm_log("%d socket has been handled : %d", i-1, op_server->clients->get(i-1)->get_ref_cnt());
 
