@@ -37,7 +37,7 @@ void rhandler(OPEL_MSG *op_msg, int status)
 	if(NULL == op_msg)
 		printf("noop!\n", status);
 	printf("%s\n", op_msg->get_data());
-	cli->msg_write("hihihi");
+	cli->msg_write("Hello again", strlen("Hello again")+1);
 }
 
 int main()
