@@ -465,6 +465,8 @@ int OPEL_Socket::Write(IN uint8_t *buff, IN int size)
 			return tmpWCount;
 		wCount += tmpWCount;
 	}
+
+	sleep(30);
 	if(FALSE == put())
 		return -1;
 
