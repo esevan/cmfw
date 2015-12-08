@@ -597,6 +597,7 @@ int socket_set::insert(IN int sock_fd, uint8_t type)
 void socket_set::remove(IN int sock_no)
 {
 	uv_mutex_lock(&socket_set_mutex);
+	comm_log("Removing the socket %d", sock_no);
 
 	do{
 		socket_set_bitmap &= ~(0x01 << sock_no);
