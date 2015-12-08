@@ -12,9 +12,9 @@ void handler(OPEL_MSG *op_msg, int status)
 	char *haha = "Hello MSG";
 	printf("Handler has been called\n");
 	if(NULL == op_msg)
-		printf("noop!\n", status);
+		printf("noop!%d\n", status);
 
-	if(NULL != op_msg) printf("%d\n", status);
+	if(NULL != op_msg) printf("%s\n", (char *)op_msg->get_data());
 	if(!status){
 		printf("Write!\n");
 		cli->msg_write(haha, strlen(haha)+1);
@@ -22,6 +22,7 @@ void handler(OPEL_MSG *op_msg, int status)
 }
 void rhandler(OPEL_MSG *op_msg, int status)
 {
+	printf("Handler has been called\n");
 	if(!status){
 		printf("Error : %d\n", status);
 		return;
@@ -35,5 +36,7 @@ int main()
 {
 	cli = new OPEL_Client(intf_name, rhandler, handler);
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+	sleep(30);
+	printf("Done\n");
 	return 0;
 }

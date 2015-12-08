@@ -133,8 +133,8 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 
 	inquiry_info *tmp_bt_scan_list;
 	dev_id = hci_get_route(NULL);
-	sock = hci_open_dev(dev_id);
-	if( dev_id < 0 || sock < 0 ){
+	hci_sock = hci_open_dev(dev_id);
+	if( dev_id < 0 || hci_sock < 0 ){
 		if(BT_DEBUG)
 			printf("No BT Device\n");
 		return -BT_E_FAIL;
@@ -243,6 +243,8 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 		err = -BT_E_FAIL;
 
 	}
+
+	close(hci_sock);
 
 	free(ii);
 

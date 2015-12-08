@@ -128,6 +128,7 @@ uint32_t OPEL_MSG::get_data_len()
 }
 bool OPEL_MSG::is_file()
 {
+
 	if(!op_header->isInitialized())
 		return FALSE;
 
@@ -307,7 +308,7 @@ queue_data_t* OPEL_Comm_Queue::dequeue()
 
 	uv_mutex_lock(&queue_mutex);
 	tmp_queue = comm_queue_head(&queue);
-	res = comm_queue_data(&queue, queue_data_t, queue);
+	res = comm_queue_data(tmp_queue, queue_data_t, queue);
 	comm_queue_remove(tmp_queue);
 	len--;
 	uv_mutex_unlock(&queue_mutex);
@@ -356,7 +357,7 @@ bool dynamic_sock_put(OPEL_Socket **sock)
 
 		res = (*sock)->put();
 
-		if(res && (*sock)->get_ref_cnt()){
+		if(res && (*sock)->get_ref_cnt() == 0){
 			delete (*sock);
 			*sock = NULL;
 		}
@@ -1778,7 +1779,7 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 	strncpy(this->intf_name, intf_name,MAX_NAME_LEN);
 
 	client_handler = NULL;
-	onConnect = onConnect;
+	this->onConnect = onConnect;
 
 	closing = 0;
 	max_fd = 0;
@@ -1818,7 +1819,7 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 	strncpy(this->intf_name, intf_name,MAX_NAME_LEN);
 
 	this->client_handler = client_handler;
-	onConnect = onConnect;
+	this->onConnect = onConnect;
 
 
 	closing = 0;
@@ -1826,6 +1827,10 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 	num_threads = 0;
 
 	sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+	if(sock < 0)
+		comm_log("Socket init failed");
+	else
+		comm_log("Socket generated : %d", sock);
 
 	bt_ops = new BT_Operations();
 	if(NULL == bt_ops){
@@ -1868,6 +1873,7 @@ void OPEL_Client::generic_connect_handler(uv_work_t *req)
 {
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
 	BT_Operations *bt_ops = op_client->bt_ops;
+	comm_log("Connect thread Up %d", ++op_client->num_threads);
 	char *intf_name = op_client->intf_name;
 	int err = bt_ops->connectBT(intf_name, op_client->serv_sock->get_sock_fd());
 	
@@ -1878,13 +1884,16 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
 	int err = op_client->connect_err;
 
+	comm_log("Connect thread down %d", --op_client->num_threads);
+
+
 	if(COMM_S_OK == err){
 		comm_log("Connected!");
 		FD_SET(op_client->serv_sock->get_sock_fd(), &op_client->readfds);
 		op_client->max_fd = op_client->serv_sock->get_sock_fd();
 		op_client->connected = TRUE;
 
-		op_client->onConnect(NULL, 0);
+		comm_log("Calling handler...");
 
 		uv_queue_work(uv_default_loop(), &op_client->read_req,\
 				generic_read_handler, \
@@ -2323,11 +2332,18 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 			err = SOCKET_ERR_FAIL;
 			break;
 		}
+		else
+			comm_log("Dequeue succedded");
+
 
 		op_msg = queue_data->op_msg;
 		op_socket = serv_sock;
 		if(NULL == serv_sock){
-			comm_log("Serv sock !!");
+			err = SOCKET_ERR_FAIL;
+			break;
+		}
+		if(NULL == op_msg){
+			comm_log("MSG null");
 			err = SOCKET_ERR_FAIL;
 			break;
 		}
@@ -2335,6 +2351,8 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 		if(op_msg->is_file()){
 			FILE *fp_file = NULL;
 			int readCount = 0;
+
+			comm_log("It's file");
 
 			len = op_msg->get_file_size() - op_msg->get_file_offset();
 			if(len > MAX_DAT_LEN)
@@ -2362,7 +2380,9 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 			}
 		}
 
+		comm_log("Writing to socket ... %s", op_msg->is_msg()? (char *)op_msg->get_data():"This is File");
 		wval = op_socket->Write(queue_data->buff, queue_data->buff_len);
+		comm_log("%d / %d written", wval, queue_data->buff_len);
 		if(wval <(int)queue_data->buff_len){
 			err = SOCKET_ERR_FAIL;
 			break;
