@@ -1073,7 +1073,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 			if(op_server->clients->insert(new_client_fd, CONNECTION_TYPE_BT) >= 0){
 				FD_SET(new_client_fd, &op_server->readfds);
-				if(op_server->max_fd > new_client_fd)
+				if(op_server->max_fd < new_client_fd)
 					op_server->max_fd = new_client_fd;
 			}
 			/* Greeting? */
@@ -1393,7 +1393,6 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		if(!queue_data->attached) delete queue_data;
 		else
 			comm_log("tried to delete, but attached");
-
 	}
 
 	return;
