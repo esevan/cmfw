@@ -1408,7 +1408,11 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		if(NULL != op_server->server_handler)
 			op_server->server_handler(queue_data->op_msg, queue_data->op_msg->get_err());
 
-		if(!queue_data->attached) delete queue_data;
+		if(!queue_data->attached){
+			comm_log("Do you say this?");
+			delete queue_data;
+			comm_log("Do you say this?");
+		}
 		else
 			comm_log("tried to delete, but attached");
 	}
@@ -2211,7 +2215,11 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 		if(NULL != op_client->client_handler)
 			op_client->client_handler(queue_data->op_msg, queue_data->op_msg->get_err());
 
-		if(!queue_data->attached) delete queue_data;
+		if(!queue_data->attached){
+			comm_log("Do you say this?");
+			delete queue_data;
+			comm_log("Do you say this?");
+		}
 		else
 			comm_log("Tried to delete, but attached");
 	}
