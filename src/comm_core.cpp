@@ -1040,7 +1040,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	fd_set readfds = op_server->readfds;
 	fd_set errfds;
 	int i;
-	FD_ZERO(errfds);
+	FD_ZERO(&errfds);
 	for(i=0; i<op_server->max_fd+1; i++){
 		printf("%d", FD_ISSET(i, &readfds)? 1:0);
 	}
