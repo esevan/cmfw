@@ -2142,7 +2142,9 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				}
 			}
 			else {
+
 				int req_err = op_client->cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
+				comm_log("Ack comes:%d", req_err);
 				
 				if(req_err < 0){
 					if(!queue_data->attached) delete queue_data;
