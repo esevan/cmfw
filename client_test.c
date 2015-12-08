@@ -60,8 +60,12 @@ void onRead(OPEL_MSG *op_msg, int status)
 void onAck(OPEL_MSG *op_msg, int status)
 {
 	printf("OnAck called\n");
-	if(!status && NULL != op_msg)
+	if(!status && NULL != op_msg){
 		printf("Got data : %s\n", (char *)op_msg->get_data());
+		char send_str[] = "Server req&ack test";
+		printf("Send :%s\n", send_str);
+		cli->msg_write(send_str, strlen(send_str)+1);
+	}
 	else
 		printf("Failed\n");
 }
