@@ -1911,12 +1911,17 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 
 
 	if(COMM_S_OK == err){
-		comm_log("Connected!");
+		struct sockaddr_rc rem_addr = {0};
+		socklen_t opt = sizeof(rem_addr);
+		char buf[BUFF_SIZE];
+		getpeername(op_client->serv_sock->get_sock_fd(), \
+				(struct sockaddr *)&rem_addr, &opt);
+		ba2str(&rem_addr.rc_bdaddr, buf);
+
+		comm_log("Connected! %d:%s", op_client->serv_sock->get_sock_fd(), buf);
 		FD_SET(op_client->serv_sock->get_sock_fd(), &op_client->readfds);
 		op_client->max_fd = op_client->serv_sock->get_sock_fd();
 		op_client->connected = TRUE;
-
-		comm_log("Calling handler...");
 
 		uv_queue_work(uv_default_loop(), &op_client->read_req,\
 				generic_read_handler, \
@@ -2168,7 +2173,7 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
 	OPEL_Socket *serv_sock = op_client->serv_sock;
 	op_client->num_threads--;
-	comm_log("Read thread down");
+	comm_log("Read thread down:%d", op_client->num_threads);
 	if(UV_ECANCELED == status)
 		return;
 
@@ -2457,7 +2462,7 @@ void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 
 	if(op_client->cvs->getLen() > 0)
 		uv_queue_work(uv_default_loop(), &op_client->ra_req, generic_ra_handler, after_ra_handler);
-	if(!op_client->write_queue.isEmptyQueue())
+	if(op_client->write_queue.isEmptyQueue() == FALSE)
 		uv_queue_work(uv_default_loop(), &op_client->write_req, generic_write_handler, after_write_handler);
 }
 
