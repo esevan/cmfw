@@ -1983,6 +1983,8 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					break;
 				}
 			}
+			else
+				comm_log("Read done %d/%d", rCount, OPEL_HEADER_SIZE);
 			comm_log("Init from header...");
 
 			if(COMM_S_OK != op_header->init_from_buff(buff)){
@@ -2089,7 +2091,10 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			}
 			else{
 				uint8_t *data;
-				comm_log("It's msg");
+				if(!op_msg->is_msg())
+					comm_log("It's msg?????");
+				else
+					comm_log("It's msg");
 				if(MAX_MSG_LEN < op_msg->get_data_len()){
 					comm_log("Received message length is greater than MAX_MSG_LEN");
 					if(!queue_data->attached) delete queue_data;
@@ -2119,7 +2124,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						}
 					}
 					else
-						comm_log("%s MSG received", op_msg->get_data());
+						comm_log("%s MSG received", (char *)op_msg->get_data());
 					op_msg->set_data(data, op_msg->get_data_len());
 				}
 			}
