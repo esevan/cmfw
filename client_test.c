@@ -22,7 +22,7 @@ void handler(OPEL_MSG *op_msg, int status)
 }
 void rhandler(OPEL_MSG *op_msg, int status)
 {
-	printf("Handler has been called\n");
+	printf("rHandler has been called\n");
 	if(!status){
 		printf("Error : %d\n", status);
 		return;
