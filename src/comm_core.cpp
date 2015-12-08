@@ -1043,8 +1043,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			return;
 		}
 	}
-	else
-		sleep(30);
 
 	fd_set readfds = op_server->readfds;
 	fd_set errfds;
