@@ -363,7 +363,7 @@ bool dynamic_sock_put(OPEL_Socket **sock)
 		res = (*sock)->put();
 
 		if(res && (*sock)->get_ref_cnt() == 0){
-			comm_log("Socket deleting %x", *sock);
+			comm_log("Socket deleting %x-%d", *sock, (*sock)->get_sock_fd());
 			delete (*sock);
 			*sock = NULL;
 		}
