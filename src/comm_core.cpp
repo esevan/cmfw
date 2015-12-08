@@ -80,8 +80,8 @@ OPEL_MSG::OPEL_MSG()
 }
 OPEL_MSG::OPEL_MSG(OPEL_Socket *op_sock)
 {
-	dynamic_sock_get(&op_sock);
 	this->op_sock = op_sock;
+	dynamic_sock_get(&(this->op_sock));
 	op_header = new OPEL_Header();
 	data = NULL;
 	op_header->err = SOCKET_ERR_NONE;
@@ -1121,7 +1121,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			continue;
 		}
 		else{
-			comm_log("%d Socket checking!", i);
+			comm_log("%d Socket checking!%d", i, op_socket->get_ref_cnt());
 			dynamic_sock_get(&op_socket);
 		}
 	
@@ -1129,6 +1129,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 		if( 0 == res ){
 			comm_log("Not selected");
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 			dynamic_sock_put(&op_socket);
 			continue;
 		}
@@ -1151,6 +1152,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 		if(rCount < 0){
 			comm_log("Selected, but read error");
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 			dynamic_sock_put(&op_socket);
 			if(!queue_data->attached) delete queue_data;
 			else
@@ -1161,6 +1163,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		}
 		else if(rCount == 0){
 			comm_log("Socket close %d", i);
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 			dynamic_sock_put(&op_socket);
 			if(!queue_data->attached) delete queue_data;
 			else
@@ -1173,6 +1176,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		comm_log("Initializing header...");
 		if(COMM_S_OK != op_header->init_from_buff(buff)){
 			comm_log("Failed to initialize header");
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 			dynamic_sock_put(&op_socket);
 			if(!queue_data->attached) delete queue_data;
 			else
@@ -1191,6 +1195,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 			if(MAX_DAT_LEN < op_msg->get_data_len()){
 				comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)", op_msg->get_data_len(), MAX_DAT_LEN);
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				dynamic_sock_put(&op_socket);
 				if(!queue_data->attached) delete queue_data;
 				else
@@ -1207,6 +1212,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 				if(rCount < 0){
 					comm_log("read error");
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 					dynamic_sock_put(&op_socket);
 					if(!queue_data->attached) delete queue_data;
 					else
@@ -1272,6 +1278,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 
 				fclose(fp_tmp);
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				dynamic_sock_put(&op_socket);
 				if(!queue_data->attached) delete queue_data;
 				else
@@ -1280,6 +1287,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				continue;	//No need to put in ack queue.
 			}
 			else {
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				dynamic_sock_put(&op_socket);
 			}
 		}
@@ -1288,6 +1296,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			if(MAX_MSG_LEN < op_msg->get_data_len()){
 				comm_log("Received message length is greater than MAX_MSG_LEN (%d > %d)", \
 						op_msg->get_data_len(), MAX_MSG_LEN);
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				dynamic_sock_put(&op_socket);
 				if(!queue_data->attached) delete queue_data;
 				else
@@ -1305,6 +1314,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					if(rCount == 0)
 						comm_log("EOF:Dis Connected");
 					else comm_log("Read error");
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 					dynamic_sock_put(&op_socket);
 					if(!queue_data->attached) delete queue_data;
 					else
@@ -1318,6 +1328,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				op_msg->set_data(data, rCount);
 			}
 
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 			dynamic_sock_put(&op_socket);
 		}
 
@@ -1335,6 +1346,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 				comm_log("Enqueued to read queue");
 
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				dynamic_sock_put(&op_socket);
 
 				continue;
@@ -1348,6 +1360,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			   Too late ack.
 			 */
 			if(req_err < 0){
+			comm_log("refcnt: %d", op_socket->get_ref_cnt());
 				dynamic_sock_put(&op_socket);
 				if(!queue_data->attached) delete queue_data;
 				else
