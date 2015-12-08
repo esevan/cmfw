@@ -1040,7 +1040,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 	comm_log("Start Selecting server and clients");
 	if(select(op_server->max_fd+1, &(op_server->readfds), NULL, NULL, NULL) < 0){
-		comm_log("select error");
+		comm_log("select error:%s(%d)", strerror(errno), errno);
 		return;
 	}
 	comm_log("Selecting server and clients");
