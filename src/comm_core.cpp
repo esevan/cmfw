@@ -425,24 +425,28 @@ bool OPEL_Socket::put()
 	}
 
 	ref_cnt--;
+	if(ref_cnt == 0)
+		comm_log("Must not happen");
 
 	return TRUE;
 }
 int OPEL_Socket::Read(OUT uint8_t *buff, IN int size)
 {
 	int rCount = 0;
+	int res;
 	if(FALSE == get()){
 		comm_log("Get socket failed");
 		return -1;
 	}
 	rCount = read(sock, buff, size);
+	res = put();
 	if(rCount < 0){
 		comm_log("Read failed %s", strerror(errno));
 		return -1;
 	}
 	if(rCount == 0)
 		return 0;
-	if(FALSE == put()){
+	if(FALSE == res){
 		comm_log("Put socket failed");
 		return -1;
 	}
@@ -453,21 +457,16 @@ int OPEL_Socket::Read(OUT uint8_t *buff, IN int size)
 int OPEL_Socket::Write(IN uint8_t *buff, IN int size)
 {
 	int wCount = 0;
+	int res;
 	if(FALSE == get())
 		return -1;
 	wCount = write(sock, buff, size);
-	if(size > 0 && wCount <= 0)
+	res = put()
+	if(size > 0 && wCount <= 0){
 		return wCount;
-	while(wCount < size){
-		int tmpWCount;
-		tmpWCount = write(sock, buff+wCount, size - wCount);
-		if(tmpWCount <= 0)
-			return tmpWCount;
-		wCount += tmpWCount;
 	}
 
-	sleep(30);
-	if(FALSE == put())
+	if(FALSE == res)
 		return -1;
 
 	return wCount;
@@ -1117,9 +1116,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		OPEL_Header *op_header = NULL;
 		queue_data_t *queue_data = NULL;
 		OPEL_MSG *op_msg = NULL;
-
-		if(i>0 && op_server->clients->get(i-1))
-			comm_log("%d socket has been handled : %d", i-1, op_server->clients->get(i-1)->get_ref_cnt());
 
 		op_socket = op_server->clients->get(i);
 		if(NULL == op_socket){
