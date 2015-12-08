@@ -244,15 +244,11 @@ queue_data_t::queue_data_t(OPEL_Socket *op_sock)
 queue_data_t::~queue_data_t()
 {
 	if(NULL != op_msg){
-		comm_log("deleting op_msg");
 		delete op_msg;
-		comm_log("deleted op_msg");
 
 	}
 	if(NULL != buff){
-		comm_log("Is this problem?");
 		free(buff);
-		comm_log("No?");
 	}
 }
 void queue_data_t::call_handler(void)
@@ -1419,9 +1415,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 			op_server->server_handler(queue_data->op_msg, queue_data->op_msg->get_err());
 
 		if(!queue_data->attached){
-			comm_log("Do you say this?");
 			delete queue_data;
-			comm_log("Do you say this?");
 		}
 		else
 			comm_log("tried to delete, but attached");
@@ -1976,6 +1970,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	fd_set readfds = op_client->readfds;
 
 	do{
+		sleep(10);
 		if(select(op_client->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
 			comm_log("select error");
 			err = SOCKET_ERR_FAIL;
@@ -2231,9 +2226,7 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 			op_client->client_handler(queue_data->op_msg, queue_data->op_msg->get_err());
 
 		if(!queue_data->attached){
-			comm_log("Do you say this?%x", queue_data);
 			delete queue_data;
-			comm_log("Do you say this?");
 		}
 		else
 			comm_log("Tried to delete, but attached");
