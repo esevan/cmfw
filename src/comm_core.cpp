@@ -241,8 +241,12 @@ queue_data_t::queue_data_t(OPEL_Socket *op_sock)
 }
 queue_data_t::~queue_data_t()
 {
-	if(NULL != op_msg)
+	if(NULL != op_msg){
+		comm_log("deleting op_msg");
 		delete op_msg;
+		comm_log("deleted op_msg");
+
+	}
 	if(NULL != buff)
 		free(buff);
 }
@@ -358,6 +362,7 @@ bool dynamic_sock_put(OPEL_Socket **sock)
 		res = (*sock)->put();
 
 		if(res && (*sock)->get_ref_cnt() == 0){
+			comm_log("Socket deleting %x", *sock);
 			delete (*sock);
 			*sock = NULL;
 		}
@@ -1999,11 +2004,13 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			if(rCount != OPEL_HEADER_SIZE){
 				if(rCount == 0){
 					comm_log("Disconnected");
+					delete queue_data;
 					err = SOCKET_ERR_DISCON;
 					break;
 				}
 				else{
 					comm_log("Read error %d/%d", rCount, OPEL_HEADER_SIZE);
+					delete queue_data;
 					err = SOCKET_ERR_FAIL;
 					break;
 				}
