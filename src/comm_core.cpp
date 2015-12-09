@@ -1674,7 +1674,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 		}
 		else{
 			comm_log("Last write gogo");
-			op_msg->set_speical();
+			op_msg->set_special();
 		}
 
 		op_msg->set_data(NULL, len);
