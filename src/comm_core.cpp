@@ -191,6 +191,7 @@ void OPEL_MSG::set_file(file_info_t *finfo)
 	if(NULL != finfo ){
 		strncpy((op_header->data_info).finfo.fname, finfo->fname, 24);
 		(op_header->data_info).finfo.offset = finfo->offset;
+		op_header->data_info.finfo.fsize = finfo->fsize;
 	}
 	op_header->type &= PACKET_TYPE_ACK;
 	op_header->type |= PACKET_TYPE_FILE;
