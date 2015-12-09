@@ -2102,7 +2102,10 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					sprintf(fname, "./data/%s", &path[cur]);
 					comm_log("file name : %s(%d)", fname, op_msg->get_file_offset());
 
-					fp_tmp = fopen(fname, "a+");
+					if(op_msg->get_file_offset() == 0)
+						fp_tmp = fopen(fname, "w+");
+					else
+						fp_tmp = fopen(fname, "a+");
 					if(NULL == fp_tmp){
 						comm_log("File open error");
 						if(!queue_data->attached) delete queue_data;
