@@ -420,6 +420,7 @@ bool OPEL_Socket::get()
 	}
 
 	ref_cnt++;
+	comm_log("REFCNT:%d", ref_cnt);
 
 	return TRUE;
 }
@@ -2121,6 +2122,8 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					}
 					else{
 						comm_log("fwrite succedded");
+						fclose(fp_tmp);
+						delete queue_data;
 						err = SOCKET_ERR_NONE;
 						break;
 					}
@@ -2599,6 +2602,8 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 		if(NULL != op_client->client_handler)
 			op_client->client_handler(op_msg, op_msg->get_err());
 	}
+
+	delete queue_data;
 
 	return;
 }
