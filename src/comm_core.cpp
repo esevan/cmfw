@@ -1557,7 +1557,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		op_msg->set_ack();
 	}
 	op_msg->complete_header();
-	comm_log("File info set (size:%d)", op_msg->get_file_size());
+	comm_log("File info set (size:%d/%d)", op_msg->get_file_size(), finfo.fsize);
 
 
 	//	if(finfo.fsize < MAX_DAT_LEN){
@@ -2117,6 +2117,8 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					}
 					else{
 						comm_log("fwrite succedded");
+						err = SOCKET_ERR_NONE;
+						break;
 					}
 				}
 				else{//It's last
