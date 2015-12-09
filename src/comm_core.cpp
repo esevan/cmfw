@@ -725,6 +725,7 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 		cv_bitmap |= 0x01 << pos;
 		req[pos] = reqid;
 		handlers[pos] = handler;
+		comm_log("Inserted handler:%x:%x", handler, handlers[pos]);
 		status[pos] = CV_STAT_READY;
 		uv_mutex_unlock(&cv_mutex[pos]);
 
@@ -739,8 +740,6 @@ int cv_set::remove(uint32_t reqid)
 	int i, wt = 0, res = -1;
 	uv_mutex_lock(&cv_bitmap_mutex);
 	do{
-		if(cv_len == 0)
-			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
 			uv_mutex_lock(&cv_mutex[i]);
 			if(reqid == req[i]){
@@ -771,8 +770,6 @@ int cv_set::gc(void)
 	int i, res = -1;
 	uv_mutex_lock(&cv_bitmap_mutex);
 	do{
-		if(cv_len == 0)
-			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
 			uv_mutex_lock(&cv_mutex[i]);
 			if(status[i] == CV_STAT_REM){
@@ -862,9 +859,7 @@ int cv_set::wait(int i, uint32_t timeout)
 	if(status[i] == CV_STAT_READY){
 		res = 0;
 		status[i] = CV_STAT_WAIT;
-		comm_log("Wait");
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
-		comm_log("Wait done%d", tmout);
 		status[i] = CV_STAT_REM;
 		uv_cond_signal(&notWaiting[i]);
 	}
@@ -875,8 +870,9 @@ int cv_set::wait(int i, uint32_t timeout)
 		cv_len--;
 		uv_mutex_unlock(&cv_bitmap_mutex);
 	}
-	if(tmout != 0)
+	if(tmout != 0){
 		res = 1;
+	}
 
 	return res;
 }
@@ -888,8 +884,7 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 {
 	int i, res = -1;
 
-	comm_log("1lock");
-	uv_mutex_lock(&cv_mutex[res]);
+	uv_mutex_lock(&cv_bitmap_mutex);
 	for(i=0; i<MAX_REQ_LEN; i++){
 		uv_mutex_lock(&cv_mutex[i]);
 		if(reqid == req[i]){
@@ -897,6 +892,7 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 			if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
 				res = i;
 				if(NULL != queue_data){
+					comm_log("Handler Addr:%x", handlers[i]);
 					queue_data->handler = handlers[i];
 					if(NULL != queue){
 						if(COMM_S_OK != queue->enqueue(queue_data))
@@ -922,7 +918,7 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 		if(res != -1)
 			break;
 	}
-	uv_mutex_unlock(&cv_mutex[res]);
+	uv_mutex_unlock(&cv_bitmap_mutex);
 
 	return res;
 }
@@ -2512,13 +2508,16 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 	comm_log("ra thread up %d", op_client->num_threads);
 
 	for(i=0; i<MAX_REQ_LEN; i++){
-		res = cvs->wait(i, MAX_MSG_TIMEOUT);
+		res = cvs->wait(i, MAX_FILE_TIMEOUT);
 		if(res >= 0)
 			break;
 	}
 
+	comm_log("ra wait done:%d", res);
 	if(res >= 0)
 		cvs->gc();
+
+	comm_log("ra gc done");
 
 }
 void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
@@ -2545,9 +2544,11 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 		comm_log("Calling handler");
 		queue_data->call_handler();
 	}
-	else
+	else{
+		comm_log("Calling default handler");
 		if(NULL != op_client->client_handler)
 			op_client->client_handler(op_msg, op_msg->get_err());
+	}
 
 	return;
 }
