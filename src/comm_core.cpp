@@ -1205,6 +1205,10 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					err_cli_pos = i;
 					goto READ_CLIENT_SOCKET_CLOSE;
 				}
+				else{
+					comm_log("Read done %d/%d", rCount, op_msg->get_data_len());
+				}
+
 			}
 			else
 				data = NULL;
@@ -2050,6 +2054,9 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							break;
 						}
 					}
+					else{
+						comm_log("File read %d/%d", rCount, op_msg->get_data_len());
+					}
 				}
 				else 
 					data = NULL;
@@ -2073,6 +2080,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					cur++;
 
 					sprintf(fname, "./data/%s", &path[cur]);
+					comm_log("file name : %s(%d)", fname, op_msg->get_file_offset());
 
 					fp_tmp = fopen(fname, "a+");
 					if(NULL == fp_tmp){
@@ -2106,6 +2114,41 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						err = SOCKET_ERR_FREAD;
 						break;
 					}
+					else{
+						comm_log("fwrite succedded");
+					}
+				}
+				else{//It's last
+					int pathlen, cur;
+					char *path;
+					char fname[256];
+					char *tmp_msg = " received!";
+					char *msg_data;
+
+					if(NULL != data)
+						comm_log("Special, but msg-piggy-backing not supported");
+
+
+					// File path parsing //Should be done at client part
+					path = op_msg->get_file_name();
+					pathlen = strlen(path);
+					cur = pathlen;
+					while(path[cur] != '/'){
+						cur --;
+						if(cur < 0)
+							break;
+					}
+					cur++;
+
+					sprintf(fname, "./data/%s", &path[cur]);
+					comm_log("file name : %s(%d)", fname, op_msg->get_file_offset());
+
+					msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
+					strcpy(msg_data, fname);
+					strcat(msg_data, tmp_msg);
+					
+					op_msg->set_data(msg_data, strlen(msg_data)+1);
+					comm_log("%s received", msg_data);
 				}
 			}
 			else{

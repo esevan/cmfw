@@ -11,8 +11,10 @@
 #define OUT
 #endif
 
+#define NO_LOG
 
 
+#ifndef NO_LOG
 inline void _comm_log(const char *format, const char *fileName, const char *funcName, int lineNo, ...){
 	va_list ap;
 
@@ -22,6 +24,11 @@ inline void _comm_log(const char *format, const char *fileName, const char *func
 	va_end(ap);
 	printf("\n");
 }
+#else
+inline void _comm_log(const char *format, const char *fileName, const char *funcName, int lineNo, ...){
+	va_list ap;
+}
+#endif
 
 void name2uuid(IN char inputString[], OUT unsigned int outUuid[])
 {

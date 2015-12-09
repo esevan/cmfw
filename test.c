@@ -10,6 +10,7 @@ OPEL_Server *ser = NULL;
 
 void default_read_handler(OPEL_MSG *op_msg, int status);
 void ack_handler(OPEL_MSG *op_msg, int status);
+void file_ack_handler(OPEL_MSG *op_msg, int status);
 
 int main()
 {
@@ -54,10 +55,18 @@ void default_read_handler(OPEL_MSG *op_msg, int status)
 void ack_handler(OPEL_MSG *op_msg, int status)
 {
 	printf("ack_handler called\n");
-	if(!status && NULL != op_msg)
+	if(!status && NULL != op_msg){
 		printf("Got data : %s\n", (char *)op_msg->get_data());
+		printf("Sending file...");
+		ser->file_write("~/workspace/Tizen_Tutorial.pptx", NULL, file_ack_handler);
+	}
 	else
 		printf("Failed\n");
 
+}
+
+void file_ack_handler(OPEL_MSG *op_msg, int status)
+{
+	printf("File send done!\n");
 }
 
