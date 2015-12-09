@@ -1662,6 +1662,8 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 				goto WRITE_HANDLER_ERR;
 			}
 		}
+		else
+			comm_log("Last write gogo");
 
 		op_msg->set_data(NULL, len);
 
