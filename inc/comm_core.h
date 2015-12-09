@@ -172,6 +172,7 @@ class OPEL_MSG
 		void set_file(file_info_t *finfo);
 		void set_msg(msg_info_t *minfo);
 		void set_ack();
+		void set_special();
 		void set_err(uint16_t err);
 		void set_data(uint8_t *data_p, uint32_t data_len);
 		void complete_header();
