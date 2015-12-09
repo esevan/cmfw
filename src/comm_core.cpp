@@ -139,9 +139,19 @@ bool OPEL_MSG::is_file()
 }
 bool OPEL_MSG::is_special()
 {
-	if(!op_header->isInitialized())
+/*	if(!op_header->isInitialized())
 		return FALSE;
 	return ((op_header->data_len) >> 31);
+	*/
+	if(!op_header->isInitialized())
+		return FALSE;
+	if(PACKET_TYPE_SPE & op_header->type)
+		return TRUE;
+	else return FALSE:
+}
+void OPEL_MSG::set_speical()
+{
+	op_header->type |= PACKET_TYPE_SPE;
 }
 bool OPEL_MSG::is_msg()
 {
@@ -1662,8 +1672,10 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 				goto WRITE_HANDLER_ERR;
 			}
 		}
-		else
+		else{
 			comm_log("Last write gogo");
+			op_msg->set_speical();
+		}
 
 		op_msg->set_data(NULL, len);
 

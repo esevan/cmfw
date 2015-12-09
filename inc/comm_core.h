@@ -55,6 +55,7 @@ enum {
 	PACKET_TYPE_MSG = 1,\
 	PACKET_TYPE_FILE = 2,\
 	PACKET_TYPE_ACK = 4, \
+	PACKET_TYPE_SPE = 8
 };
 enum {
 	CONNECTION_TYPE_BT = 1,\
