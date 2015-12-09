@@ -149,7 +149,7 @@ bool OPEL_MSG::is_special()
 		return TRUE;
 	else return FALSE;
 }
-void OPEL_MSG::set_speical()
+void OPEL_MSG::set_special()
 {
 	op_header->type |= PACKET_TYPE_SPE;
 }
