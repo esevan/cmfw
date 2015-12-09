@@ -1220,7 +1220,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				//Check!
 
 				//Make new I/O thread?, In this version this just uses this thread to process I/O
-				mkdir("./data", 0644);
+				mkdir("./data", 0755);
 
 				// File path parsing //Should be done at client part
 				path = op_msg->get_file_name();
@@ -1557,6 +1557,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		op_msg->set_ack();
 	}
 	op_msg->complete_header();
+	comm_log("File info set (size:%d)", op_msg->get_file_size());
 
 
 	//	if(finfo.fsize < MAX_DAT_LEN){
@@ -2066,7 +2067,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					char *path;
 					op_msg->set_data(data, op_msg->get_data_len());
 
-					mkdir("./data", 0644);
+					mkdir("./data", 0755);
 
 					// File path parsing //Should be done at client part
 					path = op_msg->get_file_name();
