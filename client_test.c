@@ -43,7 +43,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 	}
 	if(!status){
 		printf("Got Msg:%s\n", (char *)op_msg->get_data());
-		if(strstr((char *)op_msg->get_data(), "Tutorial")){
+		if(strstr((char *)op_msg->get_data(), "file name")){
 			printf("File done\n");
 			cli->msg_write("good", 5, op_msg);
 			exit(1);

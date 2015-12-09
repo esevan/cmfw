@@ -58,7 +58,7 @@ void ack_handler(OPEL_MSG *op_msg, int status)
 	if(!status && NULL != op_msg){
 		printf("Got data : %s\n", (char *)op_msg->get_data());
 		printf("Sending file...");
-		ser->file_write("~/workspace/Tizen_Tutorial.pptx", NULL, file_ack_handler);
+		ser->file_write("../msg", NULL, file_ack_handler);
 	}
 	else
 		printf("Failed\n");
