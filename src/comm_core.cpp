@@ -2054,7 +2054,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							break;
 						}
 						else{
-							comm_log("Read error");
+							comm_log("Read error%d/%d", rCount, op_msg->get_data_len());
 							err = SOCKET_ERR_FAIL;
 							break;
 						}
