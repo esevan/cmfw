@@ -1662,6 +1662,8 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			}
 		}
 
+		op_msg->set_data(NULL, len);
+
 		queue_data->buff = (uint8_t *)malloc( OPEL_HEADER_SIZE + len);
 		queue_data->buff_len = OPEL_HEADER_SIZE + len;
 		op_msg->get_header()->init_to_buff(queue_data->buff);
@@ -2039,6 +2041,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					err = SOCKET_ERR_FAIL;
 					break;
 				}
+				comm_log("Read data:%d", op_msg->get_data_len());
 				if(op_msg->get_data_len() > 0){
 					data = (uint8_t *)malloc(op_msg->get_data_len());
 					rCount = serv_sock->Read(data, op_msg->get_data_len());
