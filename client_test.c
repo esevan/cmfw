@@ -43,6 +43,12 @@ void onRead(OPEL_MSG *op_msg, int status)
 	}
 	if(!status){
 		printf("Got Msg:%s\n", (char *)op_msg->get_data());
+		if(strstr((char *)op_msg->get_data(), "Tutorial")){
+			printf("File done\n");
+			cli->msg_write("good", 5, op_msg);
+			exit(1);
+		}
+
 		if(!strcmp((char *)op_msg->get_data(), "Message for ack test")){
 			char send_str[] = "Ack message from client";
 			printf("Sending %s\n", send_str);
