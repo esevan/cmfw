@@ -20,12 +20,12 @@ int OPEL_Header::init_from_buff(uint8_t *buff)
 		comm_log("buff is null");
 		return -COMM_E_INVALID_PARAM;
 	}
-	memset(buff, 0, OPEL_HEADER_SIZE);
 	req_id = btohl( *( (uint32_t *)(buff) ) );
 	data_len = btohl( *( (uint32_t *)(buff+4) ) );
 	type = btohs(*(uint16_t *)(buff+8));
 	err = btohs(*(uint16_t *)(buff+10));
 	if(PACKET_TYPE_FILE & type){
+		memset(data_info.finfo.fname, 0, 24);
 		memcpy(data_info.finfo.fname, buff+12, 24);
 		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 36)) );
 		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+40) ) );
