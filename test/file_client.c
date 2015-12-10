@@ -48,20 +48,19 @@ void onConnect(OPEL_MSG *op_msg, int status)
 }
 void onRead(OPEL_MSG *op_msg, int status)
 {
-	printf("OnRead\n");
 	if(NULL == op_msg){
 		printf("OP_MSG = NULL\n");
 		return;
 	}
 	if(!status){
-		printf("Got Msg:%s\n", (char *)op_msg->get_data());
 		gettimeofday(&tmp_time, NULL);
 		char fname[] = "./res/cmfw.tar.gz";
 		if(tmp_time.tv_usec-init_time.tv_usec < 0)
-			printf("%ld.%ld]OnFile\n", init_time.tv_sec-tmp_time.tv_sec-1, 1000000+init_time.tv_usec-tmp_time.tv_usec);
+			printf("%ld.%ld]OnRead\n", init_time.tv_sec-tmp_time.tv_sec-1, 1000000+init_time.tv_usec-tmp_time.tv_usec);
 		else
-			printf("%ld.%ld]OnFile\n", init_time.tv_sec-tmp_time.tv_sec, init_time.tv_usec-tmp_time.tv_usec);
+			printf("%ld.%ld]OnRead\n", tmp_time.tv_sec-init_time.tv_sec, tmp_time.tv_usec-init_time.tv_usec);
 
+		printf("Got Msg:%s\n", (char *)op_msg->get_data());
 		cli->file_write(fname, NULL, onAck);
 	}
 	else{
