@@ -24,7 +24,7 @@ int main()
 
 void onConnect(OPEL_MSG *op_msg, int status)
 {
-	printf("OnConnect:\n")
+	printf("OnConnect:\n");
 	if(!status){
 	/////////////////////////////////////////////////////
 		printf("\tConnect Succedded\n");
