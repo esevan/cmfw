@@ -1253,7 +1253,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					fp_tmp = fopen(fname, "a+");
 				
 				if(NULL == fp_tmp){
-					comm_log("%sFile open error", &path[cur]);
+					comm_log("%sm??File open error", &path[cur]);
 					if(!queue_data->attached) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
