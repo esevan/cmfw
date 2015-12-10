@@ -57,6 +57,8 @@ void ack_handler(OPEL_MSG *op_msg, int status)
 	printf("ack_handler called\n");
 	if(!status && NULL != op_msg){
 		printf("Got data : %s\n", (char *)op_msg->get_data());
+		printf("Sending file...");
+		ser->file_write("../msg", NULL, file_ack_handler);
 	}
 	else
 		printf("Failed\n");

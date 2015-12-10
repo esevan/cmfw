@@ -1246,14 +1246,22 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				cur++;
 
 				sprintf(fname, "./data/%s", &path[cur]);
-				fp_tmp = fopen(fname, "a+");
+
+				if(op_msg->get_file_offset() == 0)
+					fp_tmp=fopen(fname, "w+");
+				else
+					fp_tmp = fopen(fname, "a+");
+				
 				if(NULL == fp_tmp){
 					comm_log("File open error");
 					if(!queue_data->attached) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
 
-					return;
+					err_cli_pos = i;
+
+					goto READ_CLIENT_SOCKET_CLOSE;
+
 				}
 
 				if(0 != fseek(fp_tmp, op_msg->get_file_offset(), SEEK_SET)){
@@ -1263,7 +1271,10 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					else
 						comm_log("tried to delete, but attached");
 
-					return;
+					err_cli_pos = i;
+
+					goto READ_CLIENT_SOCKET_CLOSE;
+
 				}
 
 				if(op_msg->get_data_len()!= fwrite(op_msg->get_data(), sizeof(char),\
@@ -1274,17 +1285,50 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					else
 						comm_log("tried to delete, but attached");
 
-					return;
+					err_cli_pos = i;
+
+					goto READ_CLIENT_SOCKET_CLOSE;
+
 				}
-
-				fclose(fp_tmp);
-				if(!queue_data->attached) delete queue_data;
-				else
-					comm_log("tried to delete, but attached");
-
-				continue;	//No need to put in ack queue.
+				else{
+					comm_log("fwrite succedded");
+					fclose(fp_tmp);
+					delete queue_data;
+					continue;
+				}
 			}
-			else {
+			else{//It's last
+				int pathlen, cur;
+				char *path;
+				char fname[256];
+				char *tmp_msg = "File:";
+				char *msg_data;
+
+				if(NULL != data)
+					comm_log("Special, but msg-piggy-backing not supproted");
+				else{
+
+					//File Path parsing 
+					path = op_msg->get_file_name();
+					pathlen = strlen(path);
+					cur = pathlen;
+					while(path[cur] != '/'){
+						cur --;
+						if(cur < 0)
+							break;
+					}
+					cur++;
+
+					sprintf(fname, "./data/%s", &path[cur]);
+					comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
+
+					msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
+					strcpy(msg_data, tmp_msg);
+					strcat(msg_data, fname);
+
+					op_msg->set_data(msg_data, strlen(msg_data) +1);
+					comm_log("%s received", msg_data);
+				}
 			}
 		}
 		else{
@@ -2100,7 +2144,6 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					cur++;
 
 					sprintf(fname, "./data/%s", &path[cur]);
-					comm_log("file name : %s(%d)", fname, op_msg->get_file_offset());
 
 					if(op_msg->get_file_offset() == 0)
 						fp_tmp = fopen(fname, "w+");
@@ -2149,47 +2192,43 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					int pathlen, cur;
 					char *path;
 					char fname[256];
-					char *tmp_msg = " received!";
+					char *tmp_msg = "File:";
 					char *msg_data;
 
 					if(NULL != data)
 						comm_log("Special, but msg-piggy-backing not supported");
+					else{
+						// File path parsing //Should be done at client part
+						path = op_msg->get_file_name();
+						pathlen = strlen(path);
+						cur = pathlen;
+						while(path[cur] != '/'){
+							cur --;
+							if(cur < 0)
+								break;
+						}
+						cur++;
 
+						sprintf(fname, "./data/%s", &path[cur]);
+						comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
 
-					// File path parsing //Should be done at client part
-					path = op_msg->get_file_name();
-					pathlen = strlen(path);
-					cur = pathlen;
-					while(path[cur] != '/'){
-						cur --;
-						if(cur < 0)
-							break;
+						msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
+						strcpy(msg_data, tmp_msg);
+						strcat(msg_data, fname);
+
+						op_msg->set_data(msg_data, strlen(msg_data)+1);
+						comm_log("%s received", msg_data);
 					}
-					cur++;
-
-					sprintf(fname, "./data/%s", &path[cur]);
-					comm_log("file name : %s(%d)", fname, op_msg->get_file_offset());
-
-					msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
-					strcpy(msg_data, fname);
-					strcat(msg_data, tmp_msg);
-					
-					op_msg->set_data(msg_data, strlen(msg_data)+1);
-					comm_log("%s received", msg_data);
 				}
 			}
 			else{
 				uint8_t *data;
-				if(!op_msg->is_msg())
-					comm_log("It's msg?????");
-				else
-					comm_log("It's msg:%d", op_msg->get_data_len());
 				if(MAX_MSG_LEN < op_msg->get_data_len()){
 					comm_log("Received message length is greater than MAX_MSG_LEN");
 					if(!queue_data->attached) delete queue_data;
 					else
 						comm_log("Tried to delete, but attached");
-					
+
 					err = SOCKET_ERR_FAIL;
 					break;
 				}
@@ -2207,7 +2246,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						}
 						else{
 							comm_log("");
-							
+
 							err = SOCKET_ERR_FAIL;
 							break;
 						}
@@ -2629,22 +2668,4 @@ void OPEL_Client::SetClientHandler(IN Comm_Handler cli_handler)
 {
 	client_handler = cli_handler;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,17 +1,17 @@
-IDIR =inc
-SDIR =src
+IDIR =./inc
+SDIR =./src
 CC=g++
 CFLAGS=-I$(IDIR)
 OPT=-Wall
 
 ODIR=$(SDIR)/obj
-LDIR =lib
+LDIR =./lib
 
 LIBS=-lm -luv -lbluetooth -fpermissive
 
 TEST_DIR=test
-TEST_BIN=test/bin
-TEST_ODIR=test/obj
+TEST_BIN=./test/bin
+TEST_ODIR=./test/obj
 
 ##Compile for comm_bt.c
 #$(ODIR)/comm_bt.o: $(SDIR)/comm_bt.c
@@ -52,4 +52,4 @@ test:$(test_bin)
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ $(TESTBIN)/*~
+	rm -f $(ODIR)/*.o *~ core $(TEST_BIN)/*
