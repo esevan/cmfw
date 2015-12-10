@@ -920,6 +920,7 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 					req[i] = 0;
 					handlers[i] = NULL;
 					cv_bitmap &=~(0x01<<i);
+					cv_len--;
 				}
 				else if(CV_STAT_WAIT == status[i]){
 					//Normal Case
