@@ -3,9 +3,13 @@
 #include <unistd.h>
 #include <comm_core.h>
 #include <string.h>
+#include <sys/time.h>
 
 char *intf_name = "Test Interface";
 OPEL_Client *cli = NULL;
+struct timeval init_time;
+struct timeval tmp_time;
+struct timeval conn_time;
 
 void onConnect(OPEL_MSG *op_msg, int status);
 void onRead(OPEL_MSG *op_msg, int status);
@@ -13,6 +17,7 @@ void onAck(OPEL_MSG *op_msg, int status);
 
 int main()
 {
+	gettimeofday(&init_time, NULL);
 	cli = new OPEL_Client(intf_name, onRead, onConnect);
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 	sleep(30);
@@ -22,7 +27,11 @@ int main()
 
 void onConnect(OPEL_MSG *op_msg, int status)
 {
-	printf("OnConnect\n");
+	gettimeofday(&conn_time, NULL);
+	if(conn_time.tv_usec-init_time.tv_usec < 0)
+		printf("%ld.%ld]OnConnect\n", conn_time.tv_sec-init_time.tv_sec-1, 1000000+conn_time.tv_usec-init_time.tv_usec);
+	else
+		printf("%ld.%ld]OnConnect\n", conn_time.tv_sec-init_time.tv_sec, conn_time.tv_usec-init_time.tv_usec);
 	if(!status){
 		char send_str[] = "First Msg from client";
 		printf("Connect Succedded\n");
@@ -44,12 +53,16 @@ void onRead(OPEL_MSG *op_msg, int status)
 	if(!status){
 		printf("Got Msg:%s\n", (char *)op_msg->get_data());
 		if(strstr((char *)op_msg->get_data(), "received")){
-			printf("File done\n");
+			gettimeofday(&tmp_time, NULL);
+			if(tmp_time.tv_usec-conn_time.tv_usec < 0)
+				printf("%ld.%ld]OnFile\n", conn_time.tv_sec-tmp_time.tv_sec-1, 1000000+conn_time.tv_usec-tmp_time.tv_usec);
+			else
+				printf("%ld.%ld]OnFile\n", conn_time.tv_sec-tmp_time.tv_sec, conn_time.tv_usec-tmp_time.tv_usec);
+
 			cli->msg_write("good", 5, op_msg);
-			exit(1);
 		}
 
-		if(!strcmp((char *)op_msg->get_data(), "Message for ack test")){
+		/*if(!strcmp((char *)op_msg->get_data(), "Message for ack test")){
 			char send_str[] = "Ack message from client";
 			printf("Sending %s\n", send_str);
 			cli->msg_write(send_str, strlen(send_str)+1, op_msg, NULL);
@@ -58,7 +71,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 			char send_str[] = "Req message from client";
 			printf("Sending %s\n", send_str);
 			cli->msg_write(send_str, strlen(send_str)+1, NULL, onAck);
-		}
+		}*/
 	}
 	else{
 		printf("Read Failed(%d)\n", status);

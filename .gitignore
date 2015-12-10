@@ -1,4 +1,4 @@
 *.o
-test
-cli_test
+test/bin/*
 auto_git.sh
+

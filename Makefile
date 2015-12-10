@@ -9,6 +9,10 @@ LDIR =lib
 
 LIBS=-lm -luv -lbluetooth -fpermissive
 
+TEST_DIR=test
+TEST_BIN=test/bin
+TEST_ODIR=test/obj
+
 #Compile for comm_bt.c
 $(ODIR)/comm_bt.o: $(SDIR)/comm_bt.c
 	gcc -c -fPIC -o $@ $< $(CFLAGS) $(OPT) $(LIBS)
@@ -34,20 +38,18 @@ libcommcore.a: comm_bt.o comm_core.o
 libcommcore.so.1: comm_bt.o comm_core.o
 	gcc -shared -Wl,-soname,libcommcore.so.1 -o $(LDIR)/libcommcore.so $(IDIR)/comm_util.h $(ODIR)/comm_bt.o $(ODIR)/comm_core.o
 
-#Compile test.c
+#Compile test
 
+_test=msg_server msg_client #file_server file_client
+test_bin=$(patsubst %,$(TEST_BIN)/%,$(_test))
+$(TEST_BIN)/%:$(TEST_DIR)/%.c
+	$(CC) src/comm_bt.c src/comm_core.cpp $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
 
-test.o: $(ODIR)/test.o
-
-test: test.c cli_test
-	$(CC) src/comm_bt.c src/comm_core.cpp $< $(CFLAGS) -o $@ $(LIBS)
-
-cli_test: client_test.c
-	$(CC) src/comm_bt.c src/comm_core.cpp $< $(CFLAGS) -o $@ $(LIBS)
+test:$(test_bin)
 
 
 
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ test cli_test 
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ $(TESTBIN)/*~
