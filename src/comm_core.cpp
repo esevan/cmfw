@@ -932,6 +932,9 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 					uv_cond_signal(&cv[i]);
 				}
 			}
+			else if(CV_STAT_REM == status[i]){
+				comm_log("This is what i expeceted");
+			}
 		}
 		uv_mutex_unlock(&cv_mutex[i]);
 		if(res != -1)
