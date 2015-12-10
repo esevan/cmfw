@@ -2467,7 +2467,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 		op_msg->set_ack();
 	}
 	op_msg->complete_header();
-	comm_log("File info set (size:%d/%d)", op_msg->get_file_size(), finfo.fsize);
+	comm_log("File info set:%s/%s (size:%d/%d)", op_msg->get_file_name(), filePath,op_msg->get_file_size(), finfo.fsize);
 
 	if(NULL != ack_file_handler){
 		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
