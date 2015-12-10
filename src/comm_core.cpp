@@ -1581,10 +1581,6 @@ int OPEL_Server::file_write(IN const char *filePath, \
 	finfo.offset = 0;
 	fclose(fp_file);
 
-
-	//set file metadata
-	//set fname
-	//11.27 17:22
 	if(strlen(filePath) >= 24){
 		comm_log("file Path name is too long");
 		return -COMM_E_INVALID_PARAM;
@@ -2466,6 +2462,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 		op_msg->set_ack();
 	}
 	op_msg->complete_header();
+	comm_log("File info set (size:%d/%d)", op_msg->get_file_size(), finfo.fsize);
 
 	if(NULL != ack_file_handler){
 		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
@@ -2536,6 +2533,8 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 				}
 			}
 
+			op_msg->set_data(NULL, len);
+
 			queue_data->buff = (uint8_t *)malloc(OPEL_HEADER_SIZE + len);
 			queue_data->buff_len = OPEL_HEADER_SIZE + len;
 			op_msg->get_header()->init_to_buff(queue_data->buff);
@@ -2547,6 +2546,10 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 					break;
 				}
 				fclose(fp_file);
+			}
+			else{
+				comm_log("Last write gogo");
+				op_msg->set_special();
 			}
 		}
 
