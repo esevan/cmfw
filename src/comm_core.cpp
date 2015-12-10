@@ -1245,6 +1245,8 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 				cur++;
 
+				comm_log("File name: %s", op_msg->get_file_name());
+
 				sprintf(fname, "./data/%s", &path[cur]);
 
 				if(op_msg->get_file_offset() == 0)
@@ -1587,7 +1589,10 @@ int OPEL_Server::file_write(IN const char *filePath, \
 	}
 	memcpy(finfo.fname, filePath, strlen(filePath)+1);
 
-	op_socket = clients->get(cli_no);
+	if(NULL == req_msg)
+		op_socket = clients->get(cli_no);
+	else
+		op_socket = req_msg->get_op_sock();
 	if(op_socket == NULL){
 		comm_log("Invalid client");
 		return -COMM_E_INVALID_PARAM;
