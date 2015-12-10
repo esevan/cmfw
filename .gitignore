@@ -1,4 +1,5 @@
 *.o
 test/bin/*
 auto_git.sh
+tags
 
