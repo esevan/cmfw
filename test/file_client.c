@@ -61,7 +61,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 			printf("%ld.%ld]OnRead\n", tmp_time.tv_sec-init_time.tv_sec, tmp_time.tv_usec-init_time.tv_usec);
 
 		printf("Got Msg:%s\n", (char *)op_msg->get_data());
-		cli->file_write(fname, NULL, onAck);
+		cli->file_write(fname, op_msg, onAck);
 	}
 	else{
 		printf("Read Failed(%d)\n", status);
