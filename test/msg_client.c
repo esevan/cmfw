@@ -52,17 +52,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 	}
 	if(!status){
 		printf("Got Msg:%s\n", (char *)op_msg->get_data());
-		if(strstr((char *)op_msg->get_data(), "received")){
-			gettimeofday(&tmp_time, NULL);
-			if(tmp_time.tv_usec-conn_time.tv_usec < 0)
-				printf("%ld.%ld]OnFile\n", conn_time.tv_sec-tmp_time.tv_sec-1, 1000000+conn_time.tv_usec-tmp_time.tv_usec);
-			else
-				printf("%ld.%ld]OnFile\n", conn_time.tv_sec-tmp_time.tv_sec, conn_time.tv_usec-tmp_time.tv_usec);
-
-			cli->msg_write("good", 5, op_msg);
-		}
-
-		/*if(!strcmp((char *)op_msg->get_data(), "Message for ack test")){
+		if(!strcmp((char *)op_msg->get_data(), "Message for ack test")){
 			char send_str[] = "Ack message from client";
 			printf("Sending %s\n", send_str);
 			cli->msg_write(send_str, strlen(send_str)+1, op_msg, NULL);
@@ -71,7 +61,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 			char send_str[] = "Req message from client";
 			printf("Sending %s\n", send_str);
 			cli->msg_write(send_str, strlen(send_str)+1, NULL, onAck);
-		}*/
+		}
 	}
 	else{
 		printf("Read Failed(%d)\n", status);
