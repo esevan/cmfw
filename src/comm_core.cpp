@@ -24,13 +24,13 @@ int OPEL_Header::init_from_buff(uint8_t *buff)
 	data_len = btohl( *( (uint32_t *)(buff+4) ) );
 	type = btohs(*(uint16_t *)(buff+8));
 	err = btohs(*(uint16_t *)(buff+10));
-	if(PACKET_TYPE_FILE == type){
+	if(PACKET_TYPE_FILE & type){
 		memcpy(data_info.finfo.fname, buff+12, 24);
 		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 36)) );
 		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+40) ) );
 		comm_log("name:%s", data_info.finfo.fname);
 	}
-	else if (PACKET_TYPE_MSG == type){
+	else if (PACKET_TYPE_MSG & type){
 		memcpy(data_info.minfo.dest_intf, buff+12, 16);
 		memcpy(data_info.minfo.src_intf, buff+28, 16);
 	}
