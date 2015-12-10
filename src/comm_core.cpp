@@ -1298,7 +1298,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				else{
 					comm_log("fwrite succedded");
 					fclose(fp_tmp);
-					if(op_msg->is_ack()){
+					/*if(op_msg->is_ack()){
 						int ress;
 						comm_log("ack wait update");
 						if(0 <= (res=op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, queue_data)))
@@ -1306,7 +1306,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 						else
 							comm_log("No wait this");
 						comm_log("ack wait update done(%d)",res);
-					}
+					}*/
 					delete queue_data;
 					continue;
 				}
