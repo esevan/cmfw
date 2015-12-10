@@ -1794,7 +1794,9 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			new_msg->complete_header();
 
 			op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, new_queue_data);
-			op_server->cvs->insert(op_msg->get_req_id(), new_queue_data->handler);
+			if(0>op_server->cvs->insert(op_msg->get_req_id(), new_queue_data->handler)){
+				comm_log("ReqId:%d, Hnadler:%x", op_msg->get_req_id(), new_queue_data->handler);
+			}
 			op_server->write_queue.enqueue(new_queue_data);
 		}
 	}
