@@ -874,6 +874,7 @@ int cv_set::wait(int i, uint32_t timeout)
 		status[i] = CV_STAT_WAIT;
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
 		status[i] = CV_STAT_REM;
+		req[i] = 0;
 		uv_cond_signal(&notWaiting[i]);
 	}
 	uv_mutex_unlock(&cv_mutex[i]);
