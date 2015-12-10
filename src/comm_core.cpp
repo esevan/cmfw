@@ -25,7 +25,6 @@ int OPEL_Header::init_from_buff(uint8_t *buff)
 	type = btohs(*(uint16_t *)(buff+8));
 	err = btohs(*(uint16_t *)(buff+10));
 	if(PACKET_TYPE_FILE & type){
-		memset(data_info.finfo.fname, 0, 24);
 		memcpy(data_info.finfo.fname, buff+12, 24);
 		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 36)) );
 		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+40) ) );
@@ -57,13 +56,13 @@ int OPEL_Header::init_to_buff(uint8_t *buff)
 	memcpy(buff+8, (uint8_t *)&b_type, 2);
 	memcpy(buff+10, (uint8_t *)&b_err, 2);
 
-	if(PACKET_TYPE_FILE == type){
+	if(PACKET_TYPE_FILE & type){
 		uint32_t b_offset = htobl(data_info.finfo.offset);
 		memcpy(buff+12, data_info.finfo.fname, 24);
 		memcpy(buff+36, (uint8_t *)&(data_info.finfo.fsize), 4);
 		memcpy(buff+40, (uint8_t *)&b_offset, 4);
 	}
-	else if (PACKET_TYPE_MSG == type || PACKET_TYPE_ACK == type) {
+	else if (PACKET_TYPE_MSG & type) {
 		memcpy(buff+12, data_info.minfo.dest_intf, 16);
 		memcpy(buff+28, data_info.minfo.src_intf, 16);
 	}
