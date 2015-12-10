@@ -1299,7 +1299,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					if(op_msg->is_ack()){
 						int ress;
 						comm_log("ack wait update");
-						if(0 <= res=op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, queue_data))
+						if(0 <= (res=op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, queue_data)))
 						op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
 						else
 							comm_log("No wait this");
