@@ -713,11 +713,15 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 {
 	int pos;
 	uint8_t stat;
-	if(~cv_bitmap == 0)
+	if(~cv_bitmap == 0){
+		comm_log("It's full");
 		return -1;
+	}
 
-	if(reqid == 0 || handler == NULL)
+	if(reqid == 0 || handler == NULL){
+		comm_log("reqid ==0 or handler == NULL");
 		return -1;
+	}
 
 	if(search(reqid, &stat) >= 0){
 		comm_log("reqid duplicated");
