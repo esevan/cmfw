@@ -2532,6 +2532,10 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 					break;
 				}
 			}
+			else{
+				comm_log("Last write gogo");
+				op_msg->set_special();
+			}
 
 			op_msg->set_data(NULL, len);
 
@@ -2546,10 +2550,6 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 					break;
 				}
 				fclose(fp_file);
-			}
-			else{
-				comm_log("Last write gogo");
-				op_msg->set_special();
 			}
 		}
 
