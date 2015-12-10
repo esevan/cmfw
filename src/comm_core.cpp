@@ -1400,7 +1400,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		else {
 			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
 			op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
-			if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), new_queue_data->handler)){
+			if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
 				comm_log("Here error");
 			}
 
