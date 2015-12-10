@@ -40,7 +40,7 @@ TEST_ODIR=./test/obj
 
 #Compile test
 
-_test=msg_server msg_client #file_server file_client
+_test=msg_server msg_client file_server file_client
 test_bin=$(patsubst %,$(TEST_BIN)/%,$(_test))
 $(TEST_BIN)/%:$(TEST_DIR)/%.c
 	$(CC) src/comm_bt.c src/comm_core.cpp $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
