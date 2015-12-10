@@ -28,6 +28,7 @@ int OPEL_Header::init_from_buff(uint8_t *buff)
 		memcpy(data_info.finfo.fname, buff+12, 24);
 		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 36)) );
 		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+40) ) );
+		comm_log("name:%s", data_info.finfo.fname);
 	}
 	else if (PACKET_TYPE_MSG == type){
 		memcpy(data_info.minfo.dest_intf, buff+12, 16);
