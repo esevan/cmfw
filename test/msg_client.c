@@ -23,12 +23,13 @@ int main()
 
 void onConnect(OPEL_MSG *op_msg, int status)
 {
-	printf("OnConnect:\n");
+	printf("Client:OnConnect:\n");
 	if(!status){
 	/////////////////////////////////////////////////////
 		printf("\tConnect Succedded\n");
 	
 		char send_str[] = "Msg from client";
+		printf("\t\tSend: %s\n", send_str);
 		cli->msg_write(send_str, strlen(send_str)+1);
 	////////////////////////////////////////////////////
 	}
@@ -40,7 +41,7 @@ void onConnect(OPEL_MSG *op_msg, int status)
 }
 void onRead(OPEL_MSG *op_msg, int status)
 {
-	printf("OnRead:\n");
+	printf("Client:OnRead:\n");
 	if(NULL == op_msg){
 		printf("\tOP_MSG = NULL\n");
 		return;
@@ -68,7 +69,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 }
 void onAck(OPEL_MSG *op_msg, int status)
 {
-	printf("OnAck:\n");
+	printf("Client:OnAck:\n");
 	if(!status && NULL != op_msg){
 		//////////////////////////////////////////////////////////////////
 		printf("\tGot data : %s\n", (char *)op_msg->get_data());
