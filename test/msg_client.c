@@ -14,7 +14,6 @@ void onAck(OPEL_MSG *op_msg, int status);
 
 int main()
 {
-	gettimeofday(&init_time, NULL);
 	cli = new OPEL_Client(intf_name, onRead, onConnect);
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 	sleep(30);
