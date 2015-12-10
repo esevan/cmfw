@@ -55,7 +55,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 		}
 		//////////////////////////////////////////////////////////////////
 		else{
-			char send_str[] = "Req message from client";
+			char send_str[] = "REQ from client";
 			printf("\t\tSend: %s\n", send_str);
 			cli->msg_write(send_str, strlen(send_str)+1, NULL, onAck);
 		}
