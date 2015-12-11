@@ -38,7 +38,7 @@ void onConnect(OPEL_MSG *op_msg, int status)
 		gettimeofday(&init_time, NULL);
 		char send_str[] = "File Transfer Test Start";
 		printf("%s\n", send_str);
-		cli->msg_write(send_str, strlen(send_str)+1);
+		cli->msg_write(send_str, strlen(send_str)+1, onAck);
 	}
 	else{
 		printf("Connect Failed(%d)\n", status);

@@ -1492,6 +1492,21 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		   comm_log("cvs(%d)", op_server->cvs->getLen());
 		   }
 		 */
+
+		if(op_server->cvs->getLen() > 0){
+			int iter_ra;
+			for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+				if(op_server->ra_req[iter_ra].data == NULL){
+					op_server->ra_req[iter_ra].data = op_server;
+					break;
+				}
+			}
+			if(MAX_REQ_LEN == iter_ra)
+				comm_log("Plz I don't wanna see this");
+			else{
+				comm_log("ra inserted");
+				uv_queue_work(uv_default_loop(), &op_server->read_req, generic_ra_handler, after_ra_handler);
+		}
 		if(op_server->read_queue.isEmptyQueue()){
 			uv_queue_work(uv_default_loop(), &op_server->read_req, generic_read_handler, after_read_handler);
 			break;
