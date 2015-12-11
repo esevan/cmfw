@@ -764,7 +764,7 @@ int req_set::insert(queue_data_t *qdt)
 			}
 		}
 	}while(0);
-	uv_mutex_unlock(&unlock);
+	uv_mutex_unlock(&lock);
 
 	return res;
 }
@@ -1104,11 +1104,16 @@ OPEL_Server::OPEL_Server(const char *intf_name)
 	write_req.data = (void *)this;
 	
 	// NULL : Not used
-	for(i=0; i<MAX_REQ_LEN; i++)
+	/*for(i=0; i<MAX_REQ_LEN; i++)
 		ra_req[i].data = NULL;
+		*/
+	ra_req.data = (void *)this;
 
 	uv_queue_work(uv_default_loop(), &read_req,\
 			generic_read_handler, after_read_handler);
+	uv_queue_work(uv_default_loop(), &ra_req,\
+			generic_ra_handler, after_ra_handler);
+
 
 }
 
@@ -1159,11 +1164,15 @@ OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
 	write_req.data = (void *)this;
 	
 	// NULL : Not used
-	for(i=0; i<MAX_REQ_LEN; i++)
+	/*for(i=0; i<MAX_REQ_LEN; i++)
 		ra_req[i].data = NULL;
+		*/
+	ra_req.data = (void *)this;
 
 	uv_queue_work(uv_default_loop(), &read_req,\
 			generic_read_handler, after_read_handler);
+	uv_queue_work(uv_default_loop(), &ra_req,\
+			generic_ra_handler, after_ra_handler);
 }
 
 
@@ -2163,8 +2172,10 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 	connect_req.data = (void *)this;
 	write_req.data = (void *)this;
 	read_req.data = (void *)this;
-	for(i=0; i<MAX_REQ_LEN; i++)
+	/*for(i=0; i<MAX_REQ_LEN; i++)
 		ra_req[i].data = NULL;
+		*/
+	ra_req.data = (void *)this;
 
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
@@ -2210,8 +2221,10 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 	write_req.data = (void *)this;
 	read_req.data = (void *)this;
 	
-	for(i=0; i<MAX_REQ_LEN; i++)
+	/*for(i=0; i<MAX_REQ_LEN; i++)
 		ra_req[i].data = NULL;
+		*/
+	ra_req.data = (void *)this;
 
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
@@ -2271,6 +2284,9 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 		uv_queue_work(uv_default_loop(), &op_client->read_req,\
 				generic_read_handler, \
 				after_read_handler);
+		uv_queue_work(uv_default_loop(), &op_client->ra_req,\
+				generic_ra_handler,\
+				after_ra_handler);
 	}
 	else{
 		comm_log("Connect failed : %d", err);
