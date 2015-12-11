@@ -74,7 +74,7 @@ void onAck(OPEL_MSG *op_msg, int status)
 	printf("OnAck called\n");
 	if(!status && NULL != op_msg){
 		printf("Got data : %s\n", (char *)op_msg->get_data());
-		if(op_msg->is_special()){
+		if(op_msg->is_msg() || op_msg->is_special()){
 			cli->msg_write("cmfw.tar.gz", strlen("cmfw.tar.gz")+1, NULL, onAck2);
 		}
 		
