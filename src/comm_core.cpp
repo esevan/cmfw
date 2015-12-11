@@ -1695,7 +1695,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		if(MAX_REQ_LEN == iter_ra)
 			comm_log("Plz I don't wanna see this");
 		else
-			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	/*	data = (uint8_t *)malloc(sizeof(uint8_t) * len);
@@ -1992,7 +1992,7 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 	write_req.data = (void *)this;
 	read_req.data = (void *)this;
 	for(i=0; i<MAX_REQ_LEN; i++)
-		ra_req.data = NULL;
+		ra_req[i].data = NULL;
 
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
