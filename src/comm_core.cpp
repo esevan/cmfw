@@ -443,6 +443,7 @@ bool OPEL_Socket::put()
 	}
 
 	ref_cnt--;
+	comm_log("REFCNT:%d", ref_cnt);
 	if(ref_cnt == 0)
 		comm_log("Must not happen");
 
@@ -1551,6 +1552,8 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 			op_server->rqs->signal(op_msg->get_req_id(), queue_data);
 			comm_log("Ack Comes");
+
+			if(!queue_data->attached) delete queue_data;
 
 
 			/*
