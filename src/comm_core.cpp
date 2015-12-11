@@ -1830,7 +1830,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 	*/
-	if(NULL != ack_msg_handler){
+	if(NULL != ack_file_handler){
 		queue_data_t *ack_data = new queue_data_t(op_socket);
 		OPEL_MSG *ack_msg = ack_data->op_msg;
 		ack_data->handler = ack_file_handler;
@@ -1998,7 +1998,7 @@ WRITE_HANDLER_ERR:
 	op_msg->set_err(err);
 
 	//cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
-	rqs->signal(op_msg->get_req_id(), queue_data);
+	op_server->rqs->signal(op_msg->get_req_id(), queue_data);
 	return;
 }
 
@@ -2796,7 +2796,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 	*/
-	if(NULL != ack_msg_handler){
+	if(NULL != ack_file_handler){
 		queue_data_t *ack_data = new queue_data_t(op_socket);
 		OPEL_MSG *ack_msg = ack_data->op_msg;
 		ack_data->handler = ack_file_handler;
@@ -3006,7 +3006,7 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 	while(TRUE){
 		queue_data = op_client->ack_queue.dequeue();
 		if(NULL == queue_data){
-			uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
+			uv_queue_work(uv_default_loop(), &op_client->ra_req, generic_ra_handler, after_ra_handler);
 			break;
 		}
 		else{
