@@ -260,6 +260,7 @@ queue_data_t::queue_data_t(OPEL_Socket *op_sock)
 }
 queue_data_t::~queue_data_t()
 {
+	attached = -1;
 	if(NULL != op_msg){
 		delete op_msg;
 
@@ -686,7 +687,7 @@ req_set::~req_set()
 {
 	int i;
 	for(i=0; i<MAX_REQ_LEN; i++){
-		if(qdts[i]->attached<=0)
+		if(qdts[i]->attahced==0)
 			delete qdts[i];
 		qdts[i] = NULL;
 	}
@@ -747,7 +748,7 @@ void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
 					ackQueue->enqueue(qdt);
 					comm_log("%s enqueued msg", qdt->op_msg->get_data());
 					qdts[i]->attached--;
-					if(qdts[i]->attached<=0)delete qdts[i];
+					if(qdts[i]->attahced==0)delete qdts[i];
 					qdts[i] = NULL;
 					tout[i] = -1;
 				}
@@ -1311,7 +1312,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 		if(rCount < 0){
 			comm_log("Selected, but read error");
-			if(queue_data->attached<=0) delete queue_data;
+			if(queue_data->attahced==0) delete queue_data;
 			else
 				comm_log("tried to delete, but attached");
 
@@ -1320,7 +1321,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		}
 		else if(rCount == 0){
 			comm_log("Socket close %d", i);
-			if(queue_data->attached<=0) delete queue_data;
+			if(queue_data->attahced==0) delete queue_data;
 			else
 				comm_log("tried to delete, but attached");
 
@@ -1331,7 +1332,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		comm_log("Initializing header...");
 		if(COMM_S_OK != op_header->init_from_buff(buff)){
 			comm_log("Failed to initialize header");
-			if(queue_data->attached<=0) delete queue_data;
+			if(queue_data->attahced==0) delete queue_data;
 			else
 				comm_log("tried to delete, but attached");
 
@@ -1348,7 +1349,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 			if(MAX_DAT_LEN < op_msg->get_data_len()){
 				comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)", op_msg->get_data_len(), MAX_DAT_LEN);
-				if(queue_data->attached<=0) delete queue_data;
+				if(queue_data->attahced==0) delete queue_data;
 				else
 					comm_log("tried to delete, but attached");
 
@@ -1363,7 +1364,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 				if(rCount < 0){
 					comm_log("read error");
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
 
@@ -1406,7 +1407,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 				if(NULL == fp_tmp){
 					comm_log("%sm??File open error", &path[cur]);
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
 
@@ -1419,7 +1420,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				if(0 != fseek(fp_tmp, op_msg->get_file_offset(), SEEK_SET)){
 					comm_log("FSEEK error:%s", fname);
 					fclose(fp_tmp);
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
 
@@ -1433,7 +1434,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 							op_msg->get_data_len(), fp_tmp)){
 					comm_log("Fwrite error:%s", fname);
 					fclose(fp_tmp);
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
 
@@ -1501,7 +1502,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			if(MAX_MSG_LEN < op_msg->get_data_len()){
 				comm_log("Received message length is greater than MAX_MSG_LEN (%d > %d)", \
 						op_msg->get_data_len(), MAX_MSG_LEN);
-				if(queue_data->attached<=0) delete queue_data;
+				if(queue_data->attahced==0) delete queue_data;
 				else
 					comm_log("tried to delete, but attached");
 
@@ -1517,7 +1518,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					if(rCount == 0)
 						comm_log("EOF:Dis Connected");
 					else comm_log("Read error");
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
 
@@ -1540,7 +1541,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				comm_log("Server handler exists");
 				int ins_err = (op_server->read_queue).enqueue(queue_data);
 				if(ins_err != COMM_S_OK){
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					comm_log("Noop");
 				}
 				comm_log("Enqueued to read queue");
@@ -1561,7 +1562,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			op_server->rqs->signal(op_msg->get_req_id(), queue_data);
 			comm_log("Ack Comes");
 
-			if(queue_data->attached<=0) delete queue_data;
+			if(queue_data->attahced==0) delete queue_data;
 
 
 			/*
@@ -1652,7 +1653,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 
 		queue_data->attached--;
 
-		if(queue_data->attached<=0){
+		if(queue_data->attahced==0){
 			delete queue_data;
 		}
 	}
@@ -1874,7 +1875,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		len - readCount, fp_file);
 		if( ferror(fp_file) ) {
 		comm_log("Error reading from %s", filePath);
-		if(queue_data->attached<=0) delete queue_data;
+		if(queue_data->attahced==0) delete queue_data;
 		else
 		comm_log("tried to delete, but attached");
 
@@ -1883,7 +1884,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		readCount += frval;		
 		if( feof(fp_file) ) {
 		comm_log("Cannot happen, check the bug read Count %d, fSize %d", readCount, fSize);
-		if(queue_data->attached<=0) delete queue_data;
+		if(queue_data->attahced==0) delete queue_data;
 		else
 		comm_log("tried to delete, but attached");
 
@@ -2021,7 +2022,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 	}
 	queue_data->attached--;
 
-	if(queue_data->attached<=0)
+	if(queue_data->attahced==0)
 		delete queue_data;
 
 	return;
@@ -2131,7 +2132,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 			if(op_msg->is_file() && !op_msg->is_special()){
 				op_server->rqs->insert(queue_data);
 			}
-			else if(queue_data->attached<=0)
+			else if(queue_data->attahced==0)
 				delete queue_data;
 
 		}
@@ -2402,7 +2403,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 
 			if(COMM_S_OK != op_header->init_from_buff(buff)){
 				comm_log("Failed to initialized header");
-				if(queue_data->attached<=0) delete queue_data;
+				if(queue_data->attahced==0) delete queue_data;
 				else
 					comm_log("Tried to delete, but attached");
 
@@ -2421,7 +2422,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)",\
 							op_msg->get_data_len(), MAX_DAT_LEN);
 
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("Tried to delete, but attached");
 					err = SOCKET_ERR_FAIL;
@@ -2437,13 +2438,13 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						if(rCount == 0){
 							comm_log("Disconnected");
 							err = SOCKET_ERR_DISCON;
-							if(queue_data->attached<=0) delete queue_data;
+							if(queue_data->attahced==0) delete queue_data;
 							break;
 						}
 						else{
 							comm_log("Read error%d/%d", rCount, op_msg->get_data_len());
 							err = SOCKET_ERR_FAIL;
-							if(queue_data->attached<=0) delete queue_data;
+							if(queue_data->attahced==0) delete queue_data;
 							break;
 						}
 					}
@@ -2479,7 +2480,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						fp_tmp = fopen(fname, "a+");
 					if(NULL == fp_tmp){
 						comm_log("File open error");
-						if(queue_data->attached<=0) delete queue_data;
+						if(queue_data->attahced==0) delete queue_data;
 						else
 							comm_log("Tried to delete, but attached");
 						err = SOCKET_ERR_FOPEN;
@@ -2489,7 +2490,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					if(0 != fseek(fp_tmp, op_msg->get_file_offset(), SEEK_SET)){
 						comm_log("FSEEk error : %s", fname);
 						fclose(fp_tmp);
-						if(queue_data->attached<=0) delete queue_data;
+						if(queue_data->attahced==0) delete queue_data;
 						else
 							comm_log("tried to delete, but attached");
 
@@ -2501,7 +2502,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 								op_msg->get_data_len(), fp_tmp)){
 						comm_log("fwrite error :%s", fname);
 						fclose(fp_tmp);
-						if(queue_data->attached<=0) delete queue_data;
+						if(queue_data->attahced==0) delete queue_data;
 						else
 							comm_log("Tried to delete, but attached");
 
@@ -2556,7 +2557,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				uint8_t *data;
 				if(MAX_MSG_LEN < op_msg->get_data_len()){
 					comm_log("Received message length is greater than MAX_MSG_LEN");
-					if(queue_data->attached<=0) delete queue_data;
+					if(queue_data->attahced==0) delete queue_data;
 					else
 						comm_log("Tried to delete, but attached");
 
@@ -2573,14 +2574,14 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							comm_log("Disconnected");
 
 							err = SOCKET_ERR_DISCON;
-							if(queue_data->attached<=0) delete queue_data;
+							if(queue_data->attahced==0) delete queue_data;
 							break;
 						}
 						else{
 							comm_log("");
 
 							err = SOCKET_ERR_FAIL;
-							if(queue_data->attached<=0) delete queue_data;
+							if(queue_data->attahced==0) delete queue_data;
 							break;
 						}
 					}
@@ -2608,7 +2609,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				comm_log("Ack comes:%s", op_msg->get_data());
 				/*
 				   if(req_err < 0){
-				   if(queue_data->attached<=0) delete queue_data;
+				   if(queue_data->attahced==0) delete queue_data;
 				   else
 				   comm_log("Tried to delete, but attached");
 
@@ -2620,7 +2621,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			}
 			if(NULL == queue_data)
 				comm_log("??");
-			if(queue_data->attached<=0) delete queue_data;
+			if(queue_data->attahced==0) delete queue_data;
 
 		}
 		else{
@@ -2676,7 +2677,7 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 
 		queue_data->attached--;
 
-		if(queue_data->attached<=0){
+		if(queue_data->attahced==0){
 			delete queue_data;
 		}
 		else
@@ -2986,7 +2987,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 		}
 
 		queue_data->attached--;
-		if(queue_data->attached<=0) delete queue_data;
+		if(queue_data->attahced==0) delete queue_data;
 		else
 			comm_log("Tried to delet, but attached");
 
@@ -3086,7 +3087,7 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 			if(op_msg->is_file() && !op_msg->is_special()){
 				op_client->rqs->insert(queue_data);
 			}
-			else if(queue_data->attached<=0)
+			else if(queue_data->attahced==0)
 				delete queue_data;
 			else
 				comm_log("%d attached", queue_data->attached);
