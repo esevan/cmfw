@@ -739,6 +739,7 @@ void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
 					res = 1;
 					qdt->handler = qdts[i]->handler;
 					ackQueue->enqueue(qdt);
+					comm_log("%s enqueued msg", qdt->op_msg->get_data());
 					delete qdts[i];
 					qdts[i] = NULL;
 					tout[i] = -1;
