@@ -1941,6 +1941,8 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 			server_handler(op_msg, op_msg->get_err());
 		else
 			comm_log("ra error");
+
+		delete queue_data;
 	}while(0);
 
 	req->data =NULL;
