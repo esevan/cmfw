@@ -733,7 +733,6 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 	do{
 		if(cv_len == MAX_REQ_LEN)
 			break;
-		cv_len++;
 		pos = find_first_zero_bit(cv_bitmap);
 		if(pos < 0)
 			break;
@@ -744,6 +743,7 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 		handlers[pos] = handler;
 		comm_log("Inserted handler(%d:%d)-%x:%x", pos, req[pos], handler, handlers[pos]);
 		status[pos] = CV_STAT_READY;
+		cv_len++;
 		uv_mutex_unlock(&cv_mutex[pos]);
 
 	}while(0);
@@ -763,8 +763,9 @@ int cv_set::remove(uint32_t reqid)
 				if(status[i] == CV_STAT_WAIT){
 					uv_cond_signal(&cv[i]);
 					uv_cond_wait(&notWaiting[i], &cv_mutex[i]);
-					wt = 1;
 				}
+				else if(status[i] == CV_STAT_READY)
+					wt = 1;
 				req[i] = 0;
 				res = 0;
 				handlers[i] = NULL;
@@ -773,7 +774,7 @@ int cv_set::remove(uint32_t reqid)
 			}
 			uv_mutex_unlock(&cv_mutex[i]);
 			if(res != -1){
-				if(!wt) cv_len--;
+				if(wt) cv_len--;
 				break;
 			}
 		}
@@ -875,6 +876,7 @@ int cv_set::wait(int i, uint32_t timeout)
 	uv_mutex_lock(&cv_mutex[i]);
 	if(status[i] == CV_STAT_READY){
 		res = 0;
+		cv_len--;
 		status[i] = CV_STAT_WAIT;
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
 		comm_log("Wait done tmout:%d,pos:%d", tmout, i);
@@ -925,11 +927,11 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 				}
 				if(CV_STAT_READY == status[i]){
 					// NO need to wait but remove this cv
+					cv_len--;
 					status[i] = CV_STAT_INIT;
 					req[i] = 0;
 					handlers[i] = NULL;
 					cv_bitmap &=~(0x01<<i);
-					cv_len--;
 				}
 				else if(CV_STAT_WAIT == status[i]){
 					//Normal Case
