@@ -1505,7 +1505,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 				comm_log("Plz I don't wanna see this");
 			else{
 				comm_log("ra inserted(%d)", iter_ra);
-				uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
+				uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 			}
 		}
 		if(op_server->read_queue.isEmptyQueue()){
