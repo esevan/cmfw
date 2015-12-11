@@ -762,7 +762,7 @@ int req_set::insert(queue_data_t *qdt)
 			if(NULL == qdts[i]){
 				res = 0;
 				qdts[i] = qdt;
-				tout[i] = MAX_MSG_TIMEOUT;
+				tout[i] = MAX_FILE_TIMEOUT;
 				break;
 			}
 		}
