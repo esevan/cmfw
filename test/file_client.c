@@ -55,14 +55,11 @@ void onRead(OPEL_MSG *op_msg, int status)
 	if(!status){
 		gettimeofday(&tmp_time, NULL);
 		char fname[] = "./res/cmfw.tar.gz";
-		if(tmp_time.tv_usec-init_time.tv_usec < 0)
-			printf("%ld.%ld]OnRead\n", init_time.tv_sec-tmp_time.tv_sec-1, 1000000+init_time.tv_usec-tmp_time.tv_usec);
-		else
-			printf("%ld.%ld]OnRead\n", tmp_time.tv_sec-init_time.tv_sec, tmp_time.tv_usec-init_time.tv_usec);
 
-		if(op_msg->is_msg() || op_msg->is_special())
+		if(op_msg->is_msg() || op_msg->is_special()){
 			printf("Got Msg:%s\n", (char *)op_msg->get_data());
 			cli->file_write(fname, op_msg, onAck);
+		}
 	}
 	else{
 		printf("Read Failed(%d)\n", status);
