@@ -2678,8 +2678,6 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 	}
 
 	comm_log("ra wait done:%d", res);
-	if(res >= 0)
-		cvs->gc();
 
 	comm_log("ra gc done");
 
