@@ -718,7 +718,7 @@ void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
 	if(refresh){
 		uv_mutex_lock(&lock);
 		for(i=0; i<MAX_REQ_LEN; i++){
-			if(qdts[i] != NULL && qdts[i]->get_req_id() == reqId){
+			if(qdts[i] != NULL && qdts[i]->op_msg->get_req_id() == reqId){
 				tout[i] = MAX_FILE_TIMEOUT;
 				break;
 			}
@@ -728,7 +728,7 @@ void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
 	else{
 		uv_mutex_lock(&lock);
 		for(i=0; i<MAX_REQ_LEN; i++){
-			if(qdts[i] != NULL && qdt[i]->get_req_id() == reqId){
+			if(qdts[i] != NULL && qdts[i]->op_msg->get_req_id() == reqId){
 				if(NULL == qdt){
 					comm_log("If not refreshed, then must put queue data first");
 				}
@@ -748,7 +748,7 @@ void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
 	}
 
 }
-int req_set::insert(queue_data *qdt)
+int req_set::insert(queue_data_t *qdt)
 {
 	int i, res = -1;
 	uv_mutex_lock(&lock);
