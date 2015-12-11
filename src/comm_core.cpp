@@ -1425,7 +1425,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		}
 		else {
 			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
-			op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
 			if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
 				comm_log("Here error");
 			}
@@ -1930,7 +1929,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 
 		queue_data = op_server->ack_queue.dequeue();
 		if(NULL == queue_data){
-			comm_log("ra error");
+			comm_log("ra no queue data:Writing? OK!");
 			break;
 		}
 
