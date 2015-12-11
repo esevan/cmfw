@@ -2578,7 +2578,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
 			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_client;
+				ra_req[iter_ra].data = this;
 				break;
 			}
 		}
