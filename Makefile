@@ -39,12 +39,19 @@ TEST_ODIR=./test/obj
 #	gcc -shared -Wl,-soname,libcommcore.so.1 -o $(LDIR)/libcommcore.so $(IDIR)/comm_util.h $(ODIR)/comm_bt.o $(ODIR)/comm_core.o
 
 
-_test=msg_server msg_client file_server file_client
 test_bin=$(patsubst %,$(TEST_BIN)/%,$(_test))
 $(TEST_BIN)/%:$(TEST_DIR)/%.c
 	$(CC) -g src/comm_bt.c src/comm_core.cpp $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
 
-test:$(test_bin)
+_msg_test=msg_server msg_client
+msg_bin=$(patsubst %,$(TEST_BIN)/%,$(_msg_test))
+msg_test:$(msg_bin)
+_file_test=file_server file_client
+file_bin=$(patsubst %,$(TEST_BIN)/%,$(_file_test))
+file_test:$(file_bin)
+
+test:msg_test file_test
+
 
 
 
