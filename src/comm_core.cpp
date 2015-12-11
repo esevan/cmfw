@@ -1376,6 +1376,8 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 
 			}
+			else
+				data = NULL;
 
 			if(!op_msg->is_special()){//If it is the end-of-file, then nothing to do here but bring it to the ack queue later.
 				int pathlen, cur;
