@@ -683,8 +683,11 @@ req_set::req_set(OPEL_Comm_Queue *ackQueue)
 }
 req_set::~req_set()
 {
-	for(i=0; i<MAX_REQ_LEN; i++)
-		req[i] = 0;
+	int i;
+	for(i=0; i<MAX_REQ_LEN; i++){
+		delete qdts[i];
+		qdts[i] = NULL;
+	}
 }
 int req_set::wait(uint32_t timeout)
 {
@@ -1446,36 +1449,38 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					  }*/
 				}
 			}
-			int pathlen, cur;
-			char *path;
-			char fname[256];
-			char *tmp_msg = "File:";
-			char *msg_data;
+			{
+				int pathlen, cur;
+				char *path;
+				char fname[256];
+				char *tmp_msg = "File:";
+				char *msg_data;
 
-			if(NULL != data)
-				comm_log("Special, but msg-piggy-backing not supproted");
-			else{
+				if(NULL != data)
+					comm_log("Special, but msg-piggy-backing not supproted");
+				else{
 
-				//File Path parsing 
-				path = op_msg->get_file_name();
-				pathlen = strlen(path);
-				cur = pathlen;
-				while(path[cur] != '/'){
-					cur --;
-					if(cur < 0)
-						break;
+					//File Path parsing 
+					path = op_msg->get_file_name();
+					pathlen = strlen(path);
+					cur = pathlen;
+					while(path[cur] != '/'){
+						cur --;
+						if(cur < 0)
+							break;
+					}
+					cur++;
+
+					sprintf(fname, "./data/%s", &path[cur]);
+					comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
+
+					msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
+					strcpy(msg_data, tmp_msg);
+					strcat(msg_data, fname);
+
+					op_msg->set_data(msg_data, strlen(msg_data) +1);
+					comm_log("%s(%d) received", msg_data, op_msg->get_file_offset());
 				}
-				cur++;
-
-				sprintf(fname, "./data/%s", &path[cur]);
-				comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
-
-				msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
-				strcpy(msg_data, tmp_msg);
-				strcat(msg_data, fname);
-
-				op_msg->set_data(msg_data, strlen(msg_data) +1);
-				comm_log("%s(%d) received", msg_data, op_msg->get_file_offset());
 			}
 		}
 		else{
@@ -2473,7 +2478,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						break;
 					}
 				}
-				else{//It's last
+				{//It's last
 					int pathlen, cur;
 					char *path;
 					char fname[256];
