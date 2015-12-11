@@ -877,335 +877,300 @@ int cv_set::wait(int i, uint32_t timeout)
 		res = 0;
 		status[i] = CV_STAT_WAIT;
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
-		status[i] = CV_STAT_REM;
-		req[i] = 0;
-		uv_cond_signal(&notWaiting[i]);
-	}
-	uv_mutex_unlock(&cv_mutex[i]);
-
-	if(res != -1){
-		uv_mutex_lock(&cv_bitmap_mutex);
-		cv_len--;
-		uv_mutex_unlock(&cv_bitmap_mutex);
-	}
-	if(tmout != 0){
-		res = 1;
-	}
-
-	return res;
-}
-
-//When ack comes, enqueue to ack queue and signal to waiting thread.
-//Timing for ack to come:
-//Insert (Ready) -> Write -> (here) -> Wait (WAIT) -> (here) -> Timeout(REM) -> (here) -> Remove
-int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *queue_data)
-{
-	int i, res = -1;
-
-	uv_mutex_lock(&cv_bitmap_mutex);
-	for(i=0; i<MAX_REQ_LEN; i++){
-		uv_mutex_lock(&cv_mutex[i]);
-		if(reqid == req[i]){
-			res = -2;
-			comm_log("Stat:%d", status[i]);
-			if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
-				res = i;
-				if(NULL != queue_data){
-					comm_log("Handler Addr:%x", handlers[i]);
-					queue_data->handler = handlers[i];
-					if(NULL != queue){
-						if(COMM_S_OK != queue->enqueue(queue_data))
-							res = -1;
-						else
-							comm_log("queue inserted");
-					}
-				}
-				if(CV_STAT_READY == status[i]){
-					// NO need to wait but remove this cv
-					status[i] = CV_STAT_INIT;
-					req[i] = 0;
-					handlers[i] = NULL;
-					cv_bitmap &=~(0x01<<i);
-					cv_len--;
-				}
-				else if(CV_STAT_WAIT == status[i]){
-					//Normal Case
-					uv_cond_signal(&cv[i]);
-				}
-			}
-			else if(CV_STAT_REM == status[i]){
-				comm_log("This is what i expeceted");
-			}
+			uv_cond_signal(&notWaiting[i]);
 		}
 		uv_mutex_unlock(&cv_mutex[i]);
-		if(res != -1)
-			break;
-	}
-	uv_mutex_unlock(&cv_bitmap_mutex);
 
-	return res;
-}
-//
-
-/* OPEL_Server Implementation */
-OPEL_Server::OPEL_Server(const char *intf_name)
-{
-
-	int sock;
-
-	if(NULL == intf_name){
-		comm_log("Null pointer error");
-		return;
-	}
-	else
-		comm_log("%s server opening...", intf_name);
-
-	strncpy(this->intf_name, intf_name, MAX_NAME_LEN);
-
-	server_handler = NULL;
-
-	closing = 0;
-
-	FD_ZERO(&readfds);
-	max_fd = 0;
-	num_threads = 0;
-
-	sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-
-	bt_ops = new BT_Operations();
-	if(NULL == bt_ops){
-		comm_log("Memory allocation failed");
-		return;
-	}
-
-	if (bt_ops->openBT(sock, this->intf_name) < 0){
-		comm_log("Failed to initailze BT");
-	}
-
-	FD_SET(sock, &readfds);
-	max_fd = sock;
-
-	server_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
-	clients = new socket_set();
-	cvs = new cv_set();
-
-	read_req.data = (void *)this;
-	write_req.data = (void *)this;
-	ra_req.data = (void *)this;
-
-	uv_queue_work(uv_default_loop(), &read_req,\
-			generic_read_handler, after_read_handler);
-
-}
-
-OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
-{
-
-	int sock;
-
-	if(NULL == intf_name){
-		comm_log("Null pointer error");
-		return;
-	}
-	else
-		comm_log("%s server opening...", intf_name);
-
-	strncpy(this->intf_name, intf_name, MAX_NAME_LEN);
-
-	this->server_handler = serv_handler;
-
-	closing = 0;
-
-	FD_ZERO(&readfds);
-	max_fd = 0;
-	num_threads = 0;
-
-	sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-
-	bt_ops = new BT_Operations();
-	if(NULL == bt_ops){
-		comm_log("Memory allocation failed");
-		return;
-	}
-
-	if (bt_ops->openBT(sock, this->intf_name) < 0){
-		comm_log("Failed to initailze BT");
-	}
-
-	FD_SET(sock, &readfds);
-	max_fd = sock;
-
-	server_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
-	clients = new socket_set();
-	cvs = new cv_set();
-
-	read_req.data = (void *)this;
-	write_req.data = (void *)this;
-	ra_req.data = (void *)this;
-
-	uv_queue_work(uv_default_loop(), &read_req,\
-			generic_read_handler, after_read_handler);
-}
-
-
-
-OPEL_Server::~OPEL_Server()
-{
-	uv_cancel((uv_req_t*)&read_req);	//Stop reading
-	uv_cancel((uv_req_t*)&write_req);	//Stop writing
-
-	if(NULL != server_sock)
-		delete server_sock;
-	if(NULL != bt_ops)
-		delete bt_ops;
-	if(NULL != clients)
-		delete clients;
-	if(NULL != cvs)
-		delete cvs;
-}
-
-/* Phase 1: Select for if it is server or client
-   Phase 2: Process server case
-   Phase 3: Process client case
-   Phase 3-1: Generic handling path
-   Phase 3-2: Pass to write thread to handle the read (Ack)
- */
-void OPEL_Server::generic_read_handler(uv_work_t *req)
-{
-	int err_cli_pos = -1;
-	static int first_listen = 0;
-	OPEL_Server *op_server = (OPEL_Server *)req->data;
-	op_server->num_threads++;
-	comm_log("Read handler up %d", op_server->num_threads);
-	if(!first_listen && 0 == op_server->clients->length()){
-		comm_log("Listening ...");
-		if ( listen(op_server->server_sock->get_sock_fd(), MAX_CLIENTS) < 0 ) {
-			comm_log("listen failed");
-			return;
+		if(res != -1){
+			uv_mutex_lock(&cv_bitmap_mutex);
+			cv_len--;
+			uv_mutex_unlock(&cv_bitmap_mutex);
 		}
-		first_listen = 1;
+		if(tmout != 0){
+			res = 1;
+		}
+
+		return res;
 	}
 
-	fd_set readfds = op_server->readfds;
-	comm_log("Start Selecting server and clients");
-	if(select(op_server->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
-		comm_log("select error:%s(%d)", strerror(errno), errno);
-		return;
-	}
-	comm_log("Selecting server and clients");
-	do{
-		//If server sock has data, then accept new client
-		if(FD_ISSET(op_server->server_sock->get_sock_fd(), &readfds)){
-			struct sockaddr_rc rem_addr = { 0 };
-			socklen_t opt = sizeof(rem_addr);
-			char buf[BUFF_SIZE];
-			int new_client_fd;
+	//When ack comes, enqueue to ack queue and signal to waiting thread.
+	//Timing for ack to come:
+	//Insert (Ready) -> Write -> (here) -> Wait (WAIT) -> (here) -> Timeout(REM) -> (here) -> Remove
+	int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *queue_data)
+	{
+		int i, res = -1;
 
-			new_client_fd = accept(op_server->server_sock->get_sock_fd(), (struct sockaddr *)&rem_addr, &opt);
+		uv_mutex_lock(&cv_bitmap_mutex);
+		for(i=0; i<MAX_REQ_LEN; i++){
+			uv_mutex_lock(&cv_mutex[i]);
+			if(reqid == req[i]){
+				res = -2;
+				comm_log("Stat:%d", status[i]);
+				if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
+					res = i;
+					if(NULL != queue_data){
+						comm_log("Handler Addr:%x", handlers[i]);
+						queue_data->handler = handlers[i];
+						if(NULL != queue){
+							if(COMM_S_OK != queue->enqueue(queue_data))
+								res = -1;
+							else
+								comm_log("queue inserted");
+						}
+					}
+					if(CV_STAT_READY == status[i]){
+						// NO need to wait but remove this cv
+						status[i] = CV_STAT_INIT;
+						req[i] = 0;
+						handlers[i] = NULL;
+						cv_bitmap &=~(0x01<<i);
+						cv_len--;
+					}
+					else if(CV_STAT_WAIT == status[i]){
+						//Normal Case
+						comm_log("Hit!");
+						status[i] = CV_STAT_REM;
+						req[i] = 0;
+						uv_cond_signal(&cv[i]);
 
-			if(new_client_fd < 0){
-				comm_log("Aceept failed");
-				break;
-			}
-			if(op_server->clients->length() >= MAX_CLIENTS){
-				comm_log("Too many clients try to connect to this server");
-				close(new_client_fd);
-				break;
-			}
-
-
-			ba2str(&rem_addr.rc_bdaddr, buf);
-			comm_log("Accepted connection from %s, %d\n", buf, new_client_fd);
-			memset(buf, 0, sizeof(buf));
-
-			if(op_server->clients->insert(new_client_fd, CONNECTION_TYPE_BT) >= 0){
-				FD_SET(new_client_fd, &op_server->readfds);
-				if(op_server->max_fd < new_client_fd){
-					comm_log("max fd(%d) -> %d", op_server->max_fd, new_client_fd);
-					op_server->max_fd = new_client_fd;
+					}
+				}
+				else if(CV_STAT_REM == status[i]){
+					comm_log("This is what i expeceted");
 				}
 			}
-			/* Greeting? */
-			//write(new_client_fd, "hoho", 5);
+			uv_mutex_unlock(&cv_mutex[i]);
+			if(res != -1)
+				break;
 		}
-	}while(0);
+		uv_mutex_unlock(&cv_bitmap_mutex);
 
-	for (int i = 0; i < MAX_CLIENTS; i++){
-		int rCount;
-		int res;
-		uint8_t buff[OPEL_HEADER_SIZE];
-		OPEL_Socket *op_socket = NULL;
-		OPEL_Header *op_header = NULL;
-		queue_data_t *queue_data = NULL;
-		OPEL_MSG *op_msg = NULL;
+		return res;
+	}
+	//
 
-		op_socket = op_server->clients->get(i);
-		if(NULL == op_socket){
-			continue;
+	/* OPEL_Server Implementation */
+	OPEL_Server::OPEL_Server(const char *intf_name)
+	{
+
+		int sock;
+
+		if(NULL == intf_name){
+			comm_log("Null pointer error");
+			return;
 		}
+		else
+			comm_log("%s server opening...", intf_name);
 
-		res = FD_ISSET(op_socket->get_sock_fd(), &readfds);
+		strncpy(this->intf_name, intf_name, MAX_NAME_LEN);
 
-		if( 0 == res ){
-			comm_log("Not selected");
-			continue;
-		}
-		else 
-			comm_log("Selected");
+		server_handler = NULL;
 
-		queue_data = new queue_data_t(op_socket);
-		if(NULL == queue_data){
-			comm_log("Memeory allocation failed");
-			exit(1);
-		}
+		closing = 0;
 
-		comm_log("Initializing queue data to read...");
-		op_msg = queue_data->op_msg;
-		op_header = op_msg->get_header();
+		FD_ZERO(&readfds);
+		max_fd = 0;
+		num_threads = 0;
 
-		comm_log("Start to read header");
-		rCount = op_socket->Read(buff, OPEL_HEADER_SIZE);
-		comm_log("Read Done %d/%d ", rCount, OPEL_HEADER_SIZE);
+		sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 
-		if(rCount < 0){
-			comm_log("Selected, but read error");
-			if(!queue_data->attached) delete queue_data;
-			else
-				comm_log("tried to delete, but attached");
-
-			err_cli_pos = i;
-			goto READ_CLIENT_SOCKET_CLOSE;
-		}
-		else if(rCount == 0){
-			comm_log("Socket close %d", i);
-			if(!queue_data->attached) delete queue_data;
-			else
-				comm_log("tried to delete, but attached");
-
-			err_cli_pos = i;
-			goto READ_CLIENT_SOCKET_CLOSE;
+		bt_ops = new BT_Operations();
+		if(NULL == bt_ops){
+			comm_log("Memory allocation failed");
+			return;
 		}
 
-		comm_log("Initializing header...");
-		if(COMM_S_OK != op_header->init_from_buff(buff)){
-			comm_log("Failed to initialize header");
-			if(!queue_data->attached) delete queue_data;
-			else
-				comm_log("tried to delete, but attached");
-
-			err_cli_pos = i;
-			goto READ_CLIENT_SOCKET_CLOSE;
+		if (bt_ops->openBT(sock, this->intf_name) < 0){
+			comm_log("Failed to initailze BT");
 		}
-		comm_log("Initialization succedded");
+
+		FD_SET(sock, &readfds);
+		max_fd = sock;
+
+		server_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
+		clients = new socket_set();
+		cvs = new cv_set();
+
+		read_req.data = (void *)this;
+		write_req.data = (void *)this;
+		ra_req.data = (void *)this;
+
+		uv_queue_work(uv_default_loop(), &read_req,\
+				generic_read_handler, after_read_handler);
+
+	}
+
+	OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
+	{
+
+		int sock;
+
+		if(NULL == intf_name){
+			comm_log("Null pointer error");
+			return;
+		}
+		else
+			comm_log("%s server opening...", intf_name);
+
+		strncpy(this->intf_name, intf_name, MAX_NAME_LEN);
+
+		this->server_handler = serv_handler;
+
+		closing = 0;
+
+		FD_ZERO(&readfds);
+		max_fd = 0;
+		num_threads = 0;
+
+		sock = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+
+		bt_ops = new BT_Operations();
+		if(NULL == bt_ops){
+			comm_log("Memory allocation failed");
+			return;
+		}
+
+		if (bt_ops->openBT(sock, this->intf_name) < 0){
+			comm_log("Failed to initailze BT");
+		}
+
+		FD_SET(sock, &readfds);
+		max_fd = sock;
+
+		server_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
+		clients = new socket_set();
+		cvs = new cv_set();
+
+		read_req.data = (void *)this;
+		write_req.data = (void *)this;
+		ra_req.data = (void *)this;
+
+		uv_queue_work(uv_default_loop(), &read_req,\
+				generic_read_handler, after_read_handler);
+	}
 
 
-		if(op_msg->is_file()){
-			FILE *fp_tmp;
-			uint8_t *data;
-			char fname[256];
 
-			if(MAX_DAT_LEN < op_msg->get_data_len()){
-				comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)", op_msg->get_data_len(), MAX_DAT_LEN);
+	OPEL_Server::~OPEL_Server()
+	{
+		uv_cancel((uv_req_t*)&read_req);	//Stop reading
+		uv_cancel((uv_req_t*)&write_req);	//Stop writing
+
+		if(NULL != server_sock)
+			delete server_sock;
+		if(NULL != bt_ops)
+			delete bt_ops;
+		if(NULL != clients)
+			delete clients;
+		if(NULL != cvs)
+			delete cvs;
+	}
+
+	/* Phase 1: Select for if it is server or client
+	   Phase 2: Process server case
+	   Phase 3: Process client case
+	   Phase 3-1: Generic handling path
+	   Phase 3-2: Pass to write thread to handle the read (Ack)
+	 */
+	void OPEL_Server::generic_read_handler(uv_work_t *req)
+	{
+		int err_cli_pos = -1;
+		static int first_listen = 0;
+		OPEL_Server *op_server = (OPEL_Server *)req->data;
+		op_server->num_threads++;
+		comm_log("Read handler up %d", op_server->num_threads);
+		if(!first_listen && 0 == op_server->clients->length()){
+			comm_log("Listening ...");
+			if ( listen(op_server->server_sock->get_sock_fd(), MAX_CLIENTS) < 0 ) {
+				comm_log("listen failed");
+				return;
+			}
+			first_listen = 1;
+		}
+
+		fd_set readfds = op_server->readfds;
+		comm_log("Start Selecting server and clients");
+		if(select(op_server->max_fd+1, &readfds, NULL, NULL, NULL) < 0){
+			comm_log("select error:%s(%d)", strerror(errno), errno);
+			return;
+		}
+		comm_log("Selecting server and clients");
+		do{
+			//If server sock has data, then accept new client
+			if(FD_ISSET(op_server->server_sock->get_sock_fd(), &readfds)){
+				struct sockaddr_rc rem_addr = { 0 };
+				socklen_t opt = sizeof(rem_addr);
+				char buf[BUFF_SIZE];
+				int new_client_fd;
+
+				new_client_fd = accept(op_server->server_sock->get_sock_fd(), (struct sockaddr *)&rem_addr, &opt);
+
+				if(new_client_fd < 0){
+					comm_log("Aceept failed");
+					break;
+				}
+				if(op_server->clients->length() >= MAX_CLIENTS){
+					comm_log("Too many clients try to connect to this server");
+					close(new_client_fd);
+					break;
+				}
+
+
+				ba2str(&rem_addr.rc_bdaddr, buf);
+				comm_log("Accepted connection from %s, %d\n", buf, new_client_fd);
+				memset(buf, 0, sizeof(buf));
+
+				if(op_server->clients->insert(new_client_fd, CONNECTION_TYPE_BT) >= 0){
+					FD_SET(new_client_fd, &op_server->readfds);
+					if(op_server->max_fd < new_client_fd){
+						comm_log("max fd(%d) -> %d", op_server->max_fd, new_client_fd);
+						op_server->max_fd = new_client_fd;
+					}
+				}
+				/* Greeting? */
+				//write(new_client_fd, "hoho", 5);
+			}
+		}while(0);
+
+		for (int i = 0; i < MAX_CLIENTS; i++){
+			int rCount;
+			int res;
+			uint8_t buff[OPEL_HEADER_SIZE];
+			OPEL_Socket *op_socket = NULL;
+			OPEL_Header *op_header = NULL;
+			queue_data_t *queue_data = NULL;
+			OPEL_MSG *op_msg = NULL;
+
+			op_socket = op_server->clients->get(i);
+			if(NULL == op_socket){
+				continue;
+			}
+
+			res = FD_ISSET(op_socket->get_sock_fd(), &readfds);
+
+			if( 0 == res ){
+				comm_log("Not selected");
+				continue;
+			}
+			else 
+				comm_log("Selected");
+
+			queue_data = new queue_data_t(op_socket);
+			if(NULL == queue_data){
+				comm_log("Memeory allocation failed");
+				exit(1);
+			}
+
+			comm_log("Initializing queue data to read...");
+			op_msg = queue_data->op_msg;
+			op_header = op_msg->get_header();
+
+			comm_log("Start to read header");
+			rCount = op_socket->Read(buff, OPEL_HEADER_SIZE);
+			comm_log("Read Done %d/%d ", rCount, OPEL_HEADER_SIZE);
+
+			if(rCount < 0){
+				comm_log("Selected, but read error");
 				if(!queue_data->attached) delete queue_data;
 				else
 					comm_log("tried to delete, but attached");
@@ -1213,122 +1178,76 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				err_cli_pos = i;
 				goto READ_CLIENT_SOCKET_CLOSE;
 			}
-			if(op_msg->get_data_len() > 0){
-				data = (uint8_t *)malloc(op_msg->get_data_len());
-
-				rCount = op_socket->Read(data, op_msg->get_data_len());
-
-
-				if(rCount < 0){
-					comm_log("read error");
-					if(!queue_data->attached) delete queue_data;
-					else
-						comm_log("tried to delete, but attached");
-
-					err_cli_pos = i;
-					goto READ_CLIENT_SOCKET_CLOSE;
-				}
-				else{
-					comm_log("Read done %d/%d", rCount, op_msg->get_data_len());
-				}
-
-			}
-			else
-				data = NULL;
-
-			if(!op_msg->is_special()){//If it is the end-of-file, then nothing to do here but bring it to the ack queue later.
-				int pathlen, cur;
-				char *path;
-				op_msg->set_data(data, op_msg->get_data_len());
-				//Check!
-
-				//Make new I/O thread?, In this version this just uses this thread to process I/O
-				mkdir("./data", 0755);
-
-				// File path parsing //Should be done at client part
-				path = op_msg->get_file_name();
-				pathlen = strlen(path);
-				cur = pathlen;
-				while(path[cur] != '/'){
-					cur --;
-					if(cur < 0)
-						break;
-				}
-				cur++;
-
-				comm_log("File name: %s", op_msg->get_file_name());
-
-				sprintf(fname, "./data/%s", &path[cur]);
-
-				if(op_msg->get_file_offset() == 0)
-					fp_tmp=fopen(fname, "w+");
+			else if(rCount == 0){
+				comm_log("Socket close %d", i);
+				if(!queue_data->attached) delete queue_data;
 				else
-					fp_tmp = fopen(fname, "a+");
-				
-				if(NULL == fp_tmp){
-					comm_log("%sm??File open error", &path[cur]);
-					if(!queue_data->attached) delete queue_data;
-					else
-						comm_log("tried to delete, but attached");
+					comm_log("tried to delete, but attached");
 
-					err_cli_pos = i;
-
-					goto READ_CLIENT_SOCKET_CLOSE;
-
-				}
-
-				if(0 != fseek(fp_tmp, op_msg->get_file_offset(), SEEK_SET)){
-					comm_log("FSEEK error:%s", fname);
-					fclose(fp_tmp);
-					if(!queue_data->attached) delete queue_data;
-					else
-						comm_log("tried to delete, but attached");
-
-					err_cli_pos = i;
-
-					goto READ_CLIENT_SOCKET_CLOSE;
-
-				}
-
-				if(op_msg->get_data_len()!= fwrite(op_msg->get_data(), sizeof(char),\
-							op_msg->get_data_len(), fp_tmp)){
-					comm_log("Fwrite error:%s", fname);
-					fclose(fp_tmp);
-					if(!queue_data->attached) delete queue_data;
-					else
-						comm_log("tried to delete, but attached");
-
-					err_cli_pos = i;
-
-					goto READ_CLIENT_SOCKET_CLOSE;
-
-				}
-				else{
-					comm_log("fwrite succedded");
-					fclose(fp_tmp);
-					/*if(op_msg->is_ack()){
-						int ress;
-						comm_log("ack wait update");
-						if(0 <= (res=op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, queue_data)))
-						op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
-						else
-							comm_log("No wait this");
-						comm_log("ack wait update done(%d)",res);
-					}*/
-				}
+				err_cli_pos = i;
+				goto READ_CLIENT_SOCKET_CLOSE;
 			}
-			else{//It's last
-				int pathlen, cur;
-				char *path;
+
+			comm_log("Initializing header...");
+			if(COMM_S_OK != op_header->init_from_buff(buff)){
+				comm_log("Failed to initialize header");
+				if(!queue_data->attached) delete queue_data;
+				else
+					comm_log("tried to delete, but attached");
+
+				err_cli_pos = i;
+				goto READ_CLIENT_SOCKET_CLOSE;
+			}
+			comm_log("Initialization succedded");
+
+
+			if(op_msg->is_file()){
+				FILE *fp_tmp;
+				uint8_t *data;
 				char fname[256];
-				char *tmp_msg = "File:";
-				char *msg_data;
 
-				if(NULL != data)
-					comm_log("Special, but msg-piggy-backing not supproted");
-				else{
+				if(MAX_DAT_LEN < op_msg->get_data_len()){
+					comm_log("Received file data length is greater than MAX_DAT_LEN (%d > %d)", op_msg->get_data_len(), MAX_DAT_LEN);
+					if(!queue_data->attached) delete queue_data;
+					else
+						comm_log("tried to delete, but attached");
 
-					//File Path parsing 
+					err_cli_pos = i;
+					goto READ_CLIENT_SOCKET_CLOSE;
+				}
+				if(op_msg->get_data_len() > 0){
+					data = (uint8_t *)malloc(op_msg->get_data_len());
+
+					rCount = op_socket->Read(data, op_msg->get_data_len());
+
+
+					if(rCount < 0){
+						comm_log("read error");
+						if(!queue_data->attached) delete queue_data;
+						else
+							comm_log("tried to delete, but attached");
+
+						err_cli_pos = i;
+						goto READ_CLIENT_SOCKET_CLOSE;
+					}
+					else{
+						comm_log("Read done %d/%d", rCount, op_msg->get_data_len());
+					}
+
+				}
+				else
+					data = NULL;
+
+				if(!op_msg->is_special()){//If it is the end-of-file, then nothing to do here but bring it to the ack queue later.
+					int pathlen, cur;
+					char *path;
+					op_msg->set_data(data, op_msg->get_data_len());
+					//Check!
+
+					//Make new I/O thread?, In this version this just uses this thread to process I/O
+					mkdir("./data", 0755);
+
+					// File path parsing //Should be done at client part
 					path = op_msg->get_file_name();
 					pathlen = strlen(path);
 					cur = pathlen;
@@ -1339,39 +1258,106 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					}
 					cur++;
 
+					comm_log("File name: %s", op_msg->get_file_name());
+
 					sprintf(fname, "./data/%s", &path[cur]);
-					comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
 
-					msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
-					strcpy(msg_data, tmp_msg);
-					strcat(msg_data, fname);
+					if(op_msg->get_file_offset() == 0)
+						fp_tmp=fopen(fname, "w+");
+					else
+						fp_tmp = fopen(fname, "a+");
+					
+					if(NULL == fp_tmp){
+						comm_log("%sm??File open error", &path[cur]);
+						if(!queue_data->attached) delete queue_data;
+						else
+							comm_log("tried to delete, but attached");
 
-					op_msg->set_data(msg_data, strlen(msg_data) +1);
-					comm_log("%s received", msg_data);
+						err_cli_pos = i;
+
+						goto READ_CLIENT_SOCKET_CLOSE;
+
+					}
+
+					if(0 != fseek(fp_tmp, op_msg->get_file_offset(), SEEK_SET)){
+						comm_log("FSEEK error:%s", fname);
+						fclose(fp_tmp);
+						if(!queue_data->attached) delete queue_data;
+						else
+							comm_log("tried to delete, but attached");
+
+						err_cli_pos = i;
+
+						goto READ_CLIENT_SOCKET_CLOSE;
+
+					}
+
+					if(op_msg->get_data_len()!= fwrite(op_msg->get_data(), sizeof(char),\
+								op_msg->get_data_len(), fp_tmp)){
+						comm_log("Fwrite error:%s", fname);
+						fclose(fp_tmp);
+						if(!queue_data->attached) delete queue_data;
+						else
+							comm_log("tried to delete, but attached");
+
+						err_cli_pos = i;
+
+						goto READ_CLIENT_SOCKET_CLOSE;
+
+					}
+					else{
+						comm_log("fwrite succedded");
+						fclose(fp_tmp);
+						/*if(op_msg->is_ack()){
+							int ress;
+							comm_log("ack wait update");
+							if(0 <= (res=op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, queue_data)))
+							op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
+							else
+								comm_log("No wait this");
+							comm_log("ack wait update done(%d)",res);
+						}*/
+					}
+				}
+				else{//It's last
+					int pathlen, cur;
+					char *path;
+					char fname[256];
+					char *tmp_msg = "File:";
+					char *msg_data;
+
+					if(NULL != data)
+						comm_log("Special, but msg-piggy-backing not supproted");
+					else{
+
+						//File Path parsing 
+						path = op_msg->get_file_name();
+						pathlen = strlen(path);
+						cur = pathlen;
+						while(path[cur] != '/'){
+							cur --;
+							if(cur < 0)
+								break;
+						}
+						cur++;
+
+						sprintf(fname, "./data/%s", &path[cur]);
+						comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
+
+						msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
+						strcpy(msg_data, tmp_msg);
+						strcat(msg_data, fname);
+
+						op_msg->set_data(msg_data, strlen(msg_data) +1);
+						comm_log("%s received", msg_data);
+					}
 				}
 			}
-		}
-		else{
-			uint8_t *data;
-			if(MAX_MSG_LEN < op_msg->get_data_len()){
-				comm_log("Received message length is greater than MAX_MSG_LEN (%d > %d)", \
-						op_msg->get_data_len(), MAX_MSG_LEN);
-				if(!queue_data->attached) delete queue_data;
-				else
-					comm_log("tried to delete, but attached");
-
-				err_cli_pos = i;
-				goto READ_CLIENT_SOCKET_CLOSE;
-			}
-
-			if(op_msg->get_data_len() > 0){
-				data = (uint8_t *)malloc(op_msg->get_data_len());
-				rCount = op_socket->Read(data, op_msg->get_data_len());
-
-				if(rCount <= 0){
-					if(rCount == 0)
-						comm_log("EOF:Dis Connected");
-					else comm_log("Read error");
+			else{
+				uint8_t *data;
+				if(MAX_MSG_LEN < op_msg->get_data_len()){
+					comm_log("Received message length is greater than MAX_MSG_LEN (%d > %d)", \
+							op_msg->get_data_len(), MAX_MSG_LEN);
 					if(!queue_data->attached) delete queue_data;
 					else
 						comm_log("tried to delete, but attached");
@@ -1379,395 +1365,411 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					err_cli_pos = i;
 					goto READ_CLIENT_SOCKET_CLOSE;
 				}
-				else
-					comm_log("msg : %s received", (char *)data);
-				op_msg->set_data(data, rCount);
-			}
 
-		}
+				if(op_msg->get_data_len() > 0){
+					data = (uint8_t *)malloc(op_msg->get_data_len());
+					rCount = op_socket->Read(data, op_msg->get_data_len());
 
-		// Check the request ID for sync write
+					if(rCount <= 0){
+						if(rCount == 0)
+							comm_log("EOF:Dis Connected");
+						else comm_log("Read error");
+						if(!queue_data->attached) delete queue_data;
+						else
+							comm_log("tried to delete, but attached");
 
-		// Case 1, 2: server handler, ack handler
-		if(!op_msg->is_ack()){	// There's no write wating for this read.
-			comm_log("This will be handled at default handler");
-			if(NULL != op_server->server_handler){//case 1 : Process in user-defined server handler.
-				comm_log("Server handler exists");
-				int ins_err = (op_server->read_queue).enqueue(queue_data);
-				if(ins_err != COMM_S_OK){
-					if(!queue_data->attached) delete queue_data;
-					comm_log("Noop");
+						err_cli_pos = i;
+						goto READ_CLIENT_SOCKET_CLOSE;
+					}
+					else
+						comm_log("msg : %s received", (char *)data);
+					op_msg->set_data(data, rCount);
 				}
-				comm_log("Enqueued to read queue");
 
-
-				continue;
 			}
-			comm_log("No server handler exists, droped the data");
+
+			// Check the request ID for sync write
+
+			// Case 1, 2: server handler, ack handler
+			if(!op_msg->is_ack()){	// There's no write wating for this read.
+				comm_log("This will be handled at default handler");
+				if(NULL != op_server->server_handler){//case 1 : Process in user-defined server handler.
+					comm_log("Server handler exists");
+					int ins_err = (op_server->read_queue).enqueue(queue_data);
+					if(ins_err != COMM_S_OK){
+						if(!queue_data->attached) delete queue_data;
+						comm_log("Noop");
+					}
+					comm_log("Enqueued to read queue");
+
+
+					continue;
+				}
+				comm_log("No server handler exists, droped the data");
+			}
+			else {
+				int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
+				op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
+				if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
+					comm_log("Here error");
+				}
+
+				comm_log("Ack comes(%d)", req_err);
+
+				/*
+				   Ack comes, but no request wating.
+				   Too late ack.
+				 */
+				if(req_err < 0){
+					if(!queue_data->attached) delete queue_data;
+					else
+						comm_log("tried to delete, but attached");
+
+					continue;
+				}
+			}
 		}
-		else {
-			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
-			op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler);
-			if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
-				comm_log("Here error");
-			}
 
-			comm_log("Ack comes(%d)", req_err);
-
-			/*
-			   Ack comes, but no request wating.
-			   Too late ack.
-			 */
-			if(req_err < 0){
-				if(!queue_data->attached) delete queue_data;
-				else
-					comm_log("tried to delete, but attached");
-
-				continue;
-			}
-		}
-	}
-
-	return;
-
-READ_CLIENT_SOCKET_CLOSE:
-	comm_log("Read Client Socket Close Section:");
-	if(err_cli_pos == -1){
-		comm_log("No error client but jumped here?");
 		return;
-	}
-	FD_CLR(op_server->clients->get(err_cli_pos)->get_sock_fd(), &(op_server->readfds));
-	if(NULL != op_server->server_handler){
-		queue_data_t *qdt = new queue_data_t();
-		OPEL_MSG *op_msg = qdt->op_msg;
-		op_msg->set_err(SOCKET_ERR_DISCON);
-		struct sockaddr_rc rem_addr = {0};
-		socklen_t opt = sizeof(rem_addr);
-		char *buf = (char *)malloc(BUFF_SIZE);
 
-		getpeername(op_server->clients->get(err_cli_pos)->get_sock_fd(),\
-				(struct sockaddr *)&rem_addr, &opt);
-		ba2str(&rem_addr.rc_bdaddr, buf);
-		strcat(buf, " is disconnected");
-		op_msg->set_data((uint8_t *)buf, BUFF_SIZE);
-		(op_server->read_queue).enqueue(qdt);
-	}
-
-	op_server->clients->remove(err_cli_pos);
-
-	return;	
-}
-
-void OPEL_Server::after_read_handler(uv_work_t *req, int status)
-{
-	OPEL_Server *op_server = (OPEL_Server *)req->data;
-	op_server->num_threads--;
-	comm_log("read handler down %d", op_server->num_threads);
-	if(UV_ECANCELED == status)
-		return;
-	while(TRUE){
-		queue_data_t *queue_data = NULL;
-		if(NULL == op_server->server_sock)
+	READ_CLIENT_SOCKET_CLOSE:
+		comm_log("Read Client Socket Close Section:");
+		if(err_cli_pos == -1){
+			comm_log("No error client but jumped here?");
 			return;
-		/*
-		if(op_server->cvs->getLen()>0){
-			uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
-			comm_log("cvs(%d)", op_server->cvs->getLen());
 		}
-		*/
-		if(op_server->read_queue.isEmptyQueue()){
-			uv_queue_work(uv_default_loop(), &op_server->read_req, generic_read_handler, after_read_handler);
-			break;
+		FD_CLR(op_server->clients->get(err_cli_pos)->get_sock_fd(), &(op_server->readfds));
+		if(NULL != op_server->server_handler){
+			queue_data_t *qdt = new queue_data_t();
+			OPEL_MSG *op_msg = qdt->op_msg;
+			op_msg->set_err(SOCKET_ERR_DISCON);
+			struct sockaddr_rc rem_addr = {0};
+			socklen_t opt = sizeof(rem_addr);
+			char *buf = (char *)malloc(BUFF_SIZE);
+
+			getpeername(op_server->clients->get(err_cli_pos)->get_sock_fd(),\
+					(struct sockaddr *)&rem_addr, &opt);
+			ba2str(&rem_addr.rc_bdaddr, buf);
+			strcat(buf, " is disconnected");
+			op_msg->set_data((uint8_t *)buf, BUFF_SIZE);
+			(op_server->read_queue).enqueue(qdt);
 		}
 
-		queue_data = op_server->read_queue.dequeue();
+		op_server->clients->remove(err_cli_pos);
 
-		if(NULL == queue_data)
-			continue;
-
-		if(NULL != op_server->server_handler)
-			op_server->server_handler(queue_data->op_msg, queue_data->op_msg->get_err());
-
-		if(!queue_data->attached){
-			delete queue_data;
-		}
-		else
-			comm_log("tried to delete, but attached");
+		return;	
 	}
 
-	return;
-}
-
-int OPEL_Server::msg_write(IN const char *buf, IN int len,\
-		IN OPEL_MSG *req_msg /*=NULL*/,\
-		IN Comm_Handler ack_msg_handler/*=NULL*/,\
-		IN int cli_no/*=0*/)
-{
-	queue_data_t *queue_data = NULL;
-	OPEL_Socket *op_socket = NULL;
-	OPEL_MSG *op_msg = NULL;
-	bool empty = FALSE;
-	uint8_t *data = NULL;
-
-
-	if(NULL == buf){
-		comm_log("empty buffer");
-		return -COMM_E_POINTER;
-	}
-
-	if(len <= 0){
-		comm_log("len should be > 0");
-		return -COMM_E_INVALID_PARAM;
-	}
-
-	if(NULL == req_msg)
-		op_socket = clients->get(cli_no);
-	else
-		op_socket = req_msg->get_op_sock();
-	if(op_socket == NULL){
-		comm_log("Invalid client");
-		return -COMM_E_INVALID_PARAM;
-	}
-
-	/* Fill out MSG */
-
-	queue_data = new queue_data_t(op_socket);
-	op_msg = queue_data->op_msg;
-
-	if(NULL == req_msg){
-		if(0 == last_req_id)
-			last_req_id++;
-		op_msg->set_req_id(last_req_id++);
-		op_msg->set_msg(NULL);
-	}
-	else{
-		op_msg->set_req_id(req_msg->get_req_id());
-		op_msg->set_msg(NULL);
-		op_msg->set_ack();
-	}
-
-	data = (uint8_t *)malloc(len);
-	if(NULL == data){
-		comm_log("Malloc failed");
-		delete(queue_data);
-		return -COMM_E_POINTER;
-	}
-	memcpy(data, buf, len);
-	op_msg->set_data(data, len);
-	comm_log("set_Ack %d", op_msg->is_ack());
-	if(NULL != ack_msg_handler){
-		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
-		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
-	}
-
-	queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
-
-	op_msg->get_header()->init_to_buff(queue_data->buff);
-
-	memcpy(queue_data->buff + OPEL_HEADER_SIZE, buf, len);
-
-	queue_data->buff_len = OPEL_HEADER_SIZE + len;
-
-	empty = write_queue.isEmptyQueue();
-
-	write_queue.enqueue(queue_data);
-
-	if(empty){
-		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
-	}
-
-
-	return COMM_S_OK;
-}
-
-int OPEL_Server::file_write(IN const char *filePath, \
-		IN OPEL_MSG *req_msg/* = NULL*/,\
-		IN Comm_Handler ack_file_handler/* = NULL*/,\
-		IN int cli_no/* = 0*/)
-{
-	queue_data_t *queue_data = NULL;
-	OPEL_Socket *op_socket = NULL;
-	OPEL_MSG *op_msg = NULL;
-	//long readCount = 0;
-	file_info_t finfo;
-	FILE *fp_file;
-	bool empty = NULL;
-	//uint8_t *data = NULL;
-
-	if(NULL == filePath)
+	void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 	{
-		comm_log("filePath NULL");
-		return -COMM_E_INVALID_PARAM;
-	}
-
-	fp_file = fopen( filePath, "rb");
-	if( NULL == fp_file){
-		comm_log("File open error %s", filePath);
-		return -COMM_E_INVALID_PARAM;
-	}
-
-	fseek(fp_file, 0, SEEK_END);
-	finfo.fsize = ftell(fp_file);
-	rewind(fp_file);
-	finfo.offset = 0;
-	fclose(fp_file);
-
-	if(strlen(filePath) >= 24){
-		comm_log("file Path name is too long");
-		return -COMM_E_INVALID_PARAM;
-	}
-	memcpy(finfo.fname, filePath, strlen(filePath)+1);
-
-	if(NULL == req_msg)
-		op_socket = clients->get(cli_no);
-	else
-		op_socket = req_msg->get_op_sock();
-	if(op_socket == NULL){
-		comm_log("Invalid client");
-		return -COMM_E_INVALID_PARAM;
-	}
-
-	/* Fill out File info and data */
-	queue_data = new queue_data_t(op_socket);
-	op_msg = queue_data->op_msg;
-
-	if(NULL == req_msg){
-		if(0 == last_req_id)
-			last_req_id++;
-		op_msg->set_req_id(last_req_id++);
-		op_msg->set_file(&finfo);
-	}
-	else{
-		op_msg->set_req_id(req_msg->get_req_id());
-		op_msg->set_file(&finfo);
-		op_msg->set_ack();
-	}
-	op_msg->complete_header();
-	comm_log("File info set (size:%d/%d)", op_msg->get_file_size(), finfo.fsize);
-
-
-	//	if(finfo.fsize < MAX_DAT_LEN){
-	//		len = finfo.fsize;
-	//	}
-	//	else{
-	//		len = MAX_DAT_LEN;
-	//	}
-
-	if(NULL != ack_file_handler){
-		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
-			comm_log("cvs insert error");
-		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
-	}
-
-	/*	data = (uint8_t *)malloc(sizeof(uint8_t) * len);
-		queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
-		op_msg->op_header->init_to_buff(queue_data->buff);
-	
-		while( (readCount < (op_header->len)) )
-		{
-			frval = fread(data+readCount, 1, \
-					len - readCount, fp_file);
-			if( ferror(fp_file) ) {
-				comm_log("Error reading from %s", filePath);
-				if(!queue_data->attached) delete queue_data;
-		else
-			comm_log("tried to delete, but attached");
-	
-				return -COMM_E_FAIL;
+		OPEL_Server *op_server = (OPEL_Server *)req->data;
+		op_server->num_threads--;
+		comm_log("read handler down %d", op_server->num_threads);
+		if(UV_ECANCELED == status)
+			return;
+		while(TRUE){
+			queue_data_t *queue_data = NULL;
+			if(NULL == op_server->server_sock)
+				return;
+			/*
+			if(op_server->cvs->getLen()>0){
+				uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
+				comm_log("cvs(%d)", op_server->cvs->getLen());
 			}
-			readCount += frval;		
-			if( feof(fp_file) ) {
-				comm_log("Cannot happen, check the bug read Count %d, fSize %d", readCount, fSize);
-				if(!queue_data->attached) delete queue_data;
-		else
-			comm_log("tried to delete, but attached");
-	
-				return -COMM_E_FAIL;
+			*/
+			if(op_server->read_queue.isEmptyQueue()){
+				uv_queue_work(uv_default_loop(), &op_server->read_req, generic_read_handler, after_read_handler);
+				break;
 			}
+
+			queue_data = op_server->read_queue.dequeue();
+
+			if(NULL == queue_data)
+				continue;
+
+			if(NULL != op_server->server_handler)
+				op_server->server_handler(queue_data->op_msg, queue_data->op_msg->get_err());
+
+			if(!queue_data->attached){
+				delete queue_data;
+			}
+			else
+				comm_log("tried to delete, but attached");
 		}
-	
-		op_msg->set_data(data, len);
-		memcpy(queue_data->buff+OPEL_HEADER_SIZE, data, len);
-		queue_data->buff_len = OPEL_HEADER_SIZE + len;
-		*/
 
-	empty = write_queue.isEmptyQueue();
-	write_queue.enqueue(queue_data);
-
-	if(empty)
-		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
-
-
-	return COMM_S_OK;
-}
-
-//Dequeue, and write work on a thread
-void OPEL_Server::generic_write_handler(uv_work_t *req)
-{
-	int err = SOCKET_ERR_NONE;
-	queue_data_t *queue_data;
-	OPEL_MSG *op_msg;
-	int wval;
-	OPEL_Socket *op_socket;
-	int len;
-	OPEL_Server *op_server = (OPEL_Server *)req->data;
-	cv_set *cvs = op_server->cvs;
-	op_server->num_threads++;
-	comm_log("write thread up %d", op_server->num_threads);
-
-	queue_data = op_server->write_queue.dequeue();
-
-	if(NULL == queue_data){
-		comm_log("Dequeue failed");
-		err = SOCKET_ERR_FAIL;
-		goto WRITE_HANDLER_ERR;
-	}
-	op_msg = queue_data->op_msg;
-	op_socket = op_msg->get_op_sock();
-
-	if(NULL == op_socket){
-		comm_log("NULL == opsocket");
-		err = SOCKET_ERR_FAIL;
-		goto WRITE_HANDLER_ERR;
+		return;
 	}
 
-	if(op_msg->is_file()){
-		FILE *fp_file = NULL;
-		int readCount = 0;
+	int OPEL_Server::msg_write(IN const char *buf, IN int len,\
+			IN OPEL_MSG *req_msg /*=NULL*/,\
+			IN Comm_Handler ack_msg_handler/*=NULL*/,\
+			IN int cli_no/*=0*/)
+	{
+		queue_data_t *queue_data = NULL;
+		OPEL_Socket *op_socket = NULL;
+		OPEL_MSG *op_msg = NULL;
+		bool empty = FALSE;
+		uint8_t *data = NULL;
 
-		len = op_msg->get_file_size() - op_msg->get_file_offset();
-		if(len > MAX_DAT_LEN)
-			len = MAX_DAT_LEN;
 
-		if(len != 0){
-			fp_file = fopen(op_msg->get_file_name(), "rb");
-			if(NULL == fp_file){
-				err = SOCKET_ERR_FOPEN;
-				goto WRITE_HANDLER_ERR;
-			}
+		if(NULL == buf){
+			comm_log("empty buffer");
+			return -COMM_E_POINTER;
+		}
+
+		if(len <= 0){
+			comm_log("len should be > 0");
+			return -COMM_E_INVALID_PARAM;
+		}
+
+		if(NULL == req_msg)
+			op_socket = clients->get(cli_no);
+		else
+			op_socket = req_msg->get_op_sock();
+		if(op_socket == NULL){
+			comm_log("Invalid client");
+			return -COMM_E_INVALID_PARAM;
+		}
+
+		/* Fill out MSG */
+
+		queue_data = new queue_data_t(op_socket);
+		op_msg = queue_data->op_msg;
+
+		if(NULL == req_msg){
+			if(0 == last_req_id)
+				last_req_id++;
+			op_msg->set_req_id(last_req_id++);
+			op_msg->set_msg(NULL);
 		}
 		else{
-			comm_log("Last write gogo");
-			op_msg->set_special();
+			op_msg->set_req_id(req_msg->get_req_id());
+			op_msg->set_msg(NULL);
+			op_msg->set_ack();
 		}
 
-		op_msg->set_data(NULL, len);
+		data = (uint8_t *)malloc(len);
+		if(NULL == data){
+			comm_log("Malloc failed");
+			delete(queue_data);
+			return -COMM_E_POINTER;
+		}
+		memcpy(data, buf, len);
+		op_msg->set_data(data, len);
+		comm_log("set_Ack %d", op_msg->is_ack());
+		if(NULL != ack_msg_handler){
+			cvs->insert(op_msg->get_req_id(), ack_msg_handler);
+			uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
+		}
 
-		queue_data->buff = (uint8_t *)malloc( OPEL_HEADER_SIZE + len);
-		queue_data->buff_len = OPEL_HEADER_SIZE + len;
+		queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
+
 		op_msg->get_header()->init_to_buff(queue_data->buff);
 
-		if(len != 0){
-			readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
-			if( readCount < len ){
-				err = SOCKET_ERR_FREAD;
-				goto WRITE_HANDLER_ERR;
+		memcpy(queue_data->buff + OPEL_HEADER_SIZE, buf, len);
+
+		queue_data->buff_len = OPEL_HEADER_SIZE + len;
+
+		empty = write_queue.isEmptyQueue();
+
+		write_queue.enqueue(queue_data);
+
+		if(empty){
+			uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
+		}
+
+
+		return COMM_S_OK;
+	}
+
+	int OPEL_Server::file_write(IN const char *filePath, \
+			IN OPEL_MSG *req_msg/* = NULL*/,\
+			IN Comm_Handler ack_file_handler/* = NULL*/,\
+			IN int cli_no/* = 0*/)
+	{
+		queue_data_t *queue_data = NULL;
+		OPEL_Socket *op_socket = NULL;
+		OPEL_MSG *op_msg = NULL;
+		//long readCount = 0;
+		file_info_t finfo;
+		FILE *fp_file;
+		bool empty = NULL;
+		//uint8_t *data = NULL;
+
+		if(NULL == filePath)
+		{
+			comm_log("filePath NULL");
+			return -COMM_E_INVALID_PARAM;
+		}
+
+		fp_file = fopen( filePath, "rb");
+		if( NULL == fp_file){
+			comm_log("File open error %s", filePath);
+			return -COMM_E_INVALID_PARAM;
+		}
+
+		fseek(fp_file, 0, SEEK_END);
+		finfo.fsize = ftell(fp_file);
+		rewind(fp_file);
+		finfo.offset = 0;
+		fclose(fp_file);
+
+		if(strlen(filePath) >= 24){
+			comm_log("file Path name is too long");
+			return -COMM_E_INVALID_PARAM;
+		}
+		memcpy(finfo.fname, filePath, strlen(filePath)+1);
+
+		if(NULL == req_msg)
+			op_socket = clients->get(cli_no);
+		else
+			op_socket = req_msg->get_op_sock();
+		if(op_socket == NULL){
+			comm_log("Invalid client");
+			return -COMM_E_INVALID_PARAM;
+		}
+
+		/* Fill out File info and data */
+		queue_data = new queue_data_t(op_socket);
+		op_msg = queue_data->op_msg;
+
+		if(NULL == req_msg){
+			if(0 == last_req_id)
+				last_req_id++;
+			op_msg->set_req_id(last_req_id++);
+			op_msg->set_file(&finfo);
+		}
+		else{
+			op_msg->set_req_id(req_msg->get_req_id());
+			op_msg->set_file(&finfo);
+			op_msg->set_ack();
+		}
+		op_msg->complete_header();
+		comm_log("File info set (size:%d/%d)", op_msg->get_file_size(), finfo.fsize);
+
+
+		//	if(finfo.fsize < MAX_DAT_LEN){
+		//		len = finfo.fsize;
+		//	}
+		//	else{
+		//		len = MAX_DAT_LEN;
+		//	}
+
+		if(NULL != ack_file_handler){
+			if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
+				comm_log("cvs insert error");
+			uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
+		}
+
+		/*	data = (uint8_t *)malloc(sizeof(uint8_t) * len);
+			queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
+			op_msg->op_header->init_to_buff(queue_data->buff);
+		
+			while( (readCount < (op_header->len)) )
+			{
+				frval = fread(data+readCount, 1, \
+						len - readCount, fp_file);
+				if( ferror(fp_file) ) {
+					comm_log("Error reading from %s", filePath);
+					if(!queue_data->attached) delete queue_data;
+			else
+				comm_log("tried to delete, but attached");
+		
+					return -COMM_E_FAIL;
+				}
+				readCount += frval;		
+				if( feof(fp_file) ) {
+					comm_log("Cannot happen, check the bug read Count %d, fSize %d", readCount, fSize);
+					if(!queue_data->attached) delete queue_data;
+			else
+				comm_log("tried to delete, but attached");
+		
+					return -COMM_E_FAIL;
+				}
+			}
+		
+			op_msg->set_data(data, len);
+			memcpy(queue_data->buff+OPEL_HEADER_SIZE, data, len);
+			queue_data->buff_len = OPEL_HEADER_SIZE + len;
+			*/
+
+		empty = write_queue.isEmptyQueue();
+		write_queue.enqueue(queue_data);
+
+		if(empty)
+			uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
+
+
+		return COMM_S_OK;
+	}
+
+	//Dequeue, and write work on a thread
+	void OPEL_Server::generic_write_handler(uv_work_t *req)
+	{
+		int err = SOCKET_ERR_NONE;
+		queue_data_t *queue_data;
+		OPEL_MSG *op_msg;
+		int wval;
+		OPEL_Socket *op_socket;
+		int len;
+		OPEL_Server *op_server = (OPEL_Server *)req->data;
+		cv_set *cvs = op_server->cvs;
+		op_server->num_threads++;
+		comm_log("write thread up %d", op_server->num_threads);
+
+		queue_data = op_server->write_queue.dequeue();
+
+		if(NULL == queue_data){
+			comm_log("Dequeue failed");
+			err = SOCKET_ERR_FAIL;
+			goto WRITE_HANDLER_ERR;
+		}
+		op_msg = queue_data->op_msg;
+		op_socket = op_msg->get_op_sock();
+
+		if(NULL == op_socket){
+			comm_log("NULL == opsocket");
+			err = SOCKET_ERR_FAIL;
+			goto WRITE_HANDLER_ERR;
+		}
+
+		if(op_msg->is_file()){
+			FILE *fp_file = NULL;
+			int readCount = 0;
+
+			len = op_msg->get_file_size() - op_msg->get_file_offset();
+			if(len > MAX_DAT_LEN)
+				len = MAX_DAT_LEN;
+
+			if(len != 0){
+				fp_file = fopen(op_msg->get_file_name(), "rb");
+				if(NULL == fp_file){
+					err = SOCKET_ERR_FOPEN;
+					goto WRITE_HANDLER_ERR;
+				}
+			}
+			else{
+				comm_log("Last write gogo");
+				op_msg->set_special();
 			}
 
-			fclose(fp_file);
+			op_msg->set_data(NULL, len);
+
+			queue_data->buff = (uint8_t *)malloc( OPEL_HEADER_SIZE + len);
+			queue_data->buff_len = OPEL_HEADER_SIZE + len;
+			op_msg->get_header()->init_to_buff(queue_data->buff);
+
+			if(len != 0){
+				readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+				if( readCount < len ){
+					err = SOCKET_ERR_FREAD;
+					goto WRITE_HANDLER_ERR;
+				}
+
+				fclose(fp_file);
+			}
 		}
-	}
-	comm_log("Writing to socket ... %s", op_msg->is_msg()? (char *)op_msg->get_data():"This is File");
+		comm_log("Writing to socket ... %s", op_msg->is_msg()? (char *)op_msg->get_data():"This is File");
 	wval = op_socket->Write(queue_data->buff, queue_data->buff_len);
 	comm_log("%d/%d written", wval, queue_data->buff_len);
 	if(wval < (int)queue_data->buff_len){
