@@ -1644,9 +1644,13 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 
 		if(NULL == queue_data)
 			continue;
+		else
+			queue_data->attached++;
 
 		if(NULL != op_server->server_handler)
 			op_server->server_handler(queue_data->op_msg, queue_data->op_msg->get_err());
+
+		queue_data->attached--;
 
 		if(queue_data->attached<=0){
 			delete queue_data;
@@ -1923,12 +1927,15 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 		err = SOCKET_ERR_FAIL;
 		goto WRITE_HANDLER_ERR;
 	}
+	else
+		queue_data->attached++;
 	op_msg = queue_data->op_msg;
 	op_socket = op_msg->get_op_sock();
 
 	if(NULL == op_socket){
 		comm_log("NULL == opsocket");
 		err = SOCKET_ERR_FAIL;
+		queue_data->attached--;
 		goto WRITE_HANDLER_ERR;
 	}
 
@@ -1944,6 +1951,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			fp_file = fopen(op_msg->get_file_name(), "rb");
 			if(NULL == fp_file){
 				err = SOCKET_ERR_FOPEN;
+				queue_data->attached--;
 				goto WRITE_HANDLER_ERR;
 			}
 		}
@@ -1962,6 +1970,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
 			if( readCount < len ){
 				err = SOCKET_ERR_FREAD;
+				queue_data->attached--;
 				goto WRITE_HANDLER_ERR;
 			}
 
@@ -1973,6 +1982,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 	comm_log("%d/%d written", wval, queue_data->buff_len);
 	if(wval < (int)queue_data->buff_len){
 		err = SOCKET_ERR_FAIL;
+		queue_data->attached--;
 
 		goto WRITE_HANDLER_ERR;
 	}
@@ -2009,6 +2019,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			op_server->write_queue.enqueue(new_queue_data);
 		}
 	}
+	queue_data->attached--;
 
 	if(queue_data->attached<=0)
 		delete queue_data;
@@ -2107,6 +2118,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 			break;
 		}
 		else{
+			queue_data->attached++;
 			op_msg = queue_data->op_msg;
 			if(queue_data->handler)
 				queue_data->call_handler();
@@ -2117,6 +2129,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 			if(op_msg->is_file() && !op_msg->is_special()){
 				op_server->rqs->insert(queue_data);
 			}
+			queue_data->attached--;
 			else if(queue_data->attached<=0)
 				delete queue_data;
 
@@ -2654,9 +2667,13 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 		queue_data = op_client->read_queue.dequeue();
 		if(NULL == queue_data)
 			continue;
+		else
+			queue_data->attached++;
 
 		if(NULL != op_client->client_handler)
 			op_client->client_handler(queue_data->op_msg, queue_data->op_msg->get_err());
+
+		queue_data->attached--;
 
 		if(queue_data->attached<=0){
 			delete queue_data;
@@ -2869,19 +2886,23 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 			err = SOCKET_ERR_FAIL;
 			break;
 		}
-		else
+		else{
+			queue_data->attached++;
 			comm_log("Dequeue succedded");
+		}
 
 
 		op_msg = queue_data->op_msg;
 		op_socket = serv_sock;
 		if(NULL == serv_sock){
 			err = SOCKET_ERR_FAIL;
+			queue_data->attached--;
 			break;
 		}
 		if(NULL == op_msg){
 			comm_log("MSG null");
 			err = SOCKET_ERR_FAIL;
+			queue_data->attached--;
 			break;
 		}
 
@@ -2899,6 +2920,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 				fp_file = fopen(op_msg->get_file_name(), "rb");
 				if(NULL == fp_file){
 					err = SOCKET_ERR_FOPEN;
+					queue_data->attached--;
 					break;
 				}
 			}
@@ -2917,6 +2939,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 				readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
 				if( readCount < (int)len){
 					err = SOCKET_ERR_FREAD;
+					queue_data->attached--;
 					break;
 				}
 				fclose(fp_file);
@@ -2928,6 +2951,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 		comm_log("%d / %d written", wval, queue_data->buff_len);
 		if(wval <(int)queue_data->buff_len){
 			err = SOCKET_ERR_FAIL;
+			queue_data->attached--;
 			break;
 		}
 
@@ -2960,6 +2984,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 			}
 		}
 
+		queue_data->attached--;
 		if(queue_data->attached<=0) delete queue_data;
 		else
 			comm_log("Tried to delet, but attached");
@@ -3046,6 +3071,7 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 			break;
 		}
 		else{
+			queue_data->attached++;
 			op_msg = queue_data->op_msg;
 			comm_log("%s Ack Comes", op_msg->get_data());
 			if(queue_data->handler)
@@ -3055,6 +3081,7 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 			else
 				comm_log("ra_ error");
 
+			queue_data->attached--;
 			if(op_msg->is_file() && !op_msg->is_special()){
 				op_client->rqs->insert(queue_data);
 			}
