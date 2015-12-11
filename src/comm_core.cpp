@@ -1946,6 +1946,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	}while(0);
 
 	req->data =NULL;
+	comm_log("ra data NULL");
 
 	return;
 }
