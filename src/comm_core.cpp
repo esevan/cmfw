@@ -963,6 +963,7 @@ OPEL_Server::OPEL_Server(const char *intf_name)
 {
 
 	int sock;
+	int i;
 
 	if(NULL == intf_name){
 		comm_log("Null pointer error");
@@ -1002,7 +1003,10 @@ OPEL_Server::OPEL_Server(const char *intf_name)
 
 	read_req.data = (void *)this;
 	write_req.data = (void *)this;
-	ra_req.data = (void *)this;
+	
+	// NULL : Not used
+	for(i=0; i<MAX_REQ_LEN; i++)
+		ra_req[i].data = NULL;
 
 	uv_queue_work(uv_default_loop(), &read_req,\
 			generic_read_handler, after_read_handler);
@@ -1013,6 +1017,7 @@ OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
 {
 
 	int sock;
+	int i;
 
 	if(NULL == intf_name){
 		comm_log("Null pointer error");
@@ -1052,7 +1057,10 @@ OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
 
 	read_req.data = (void *)this;
 	write_req.data = (void *)this;
-	ra_req.data = (void *)this;
+	
+	// NULL : Not used
+	for(i=0; i<MAX_REQ_LEN; i++)
+		ra_req[i].data = NULL;
 
 	uv_queue_work(uv_default_loop(), &read_req,\
 			generic_read_handler, after_read_handler);
@@ -1568,7 +1576,17 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 	comm_log("set_Ack %d", op_msg->is_ack());
 	if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
-		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
+		int iter_ra;
+		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = op_server;
+				break;
+			}
+		}
+		if(MAX_REQ_LEN == iter_ra)
+			comm_log("Plz I don't wanna see this");
+		else
+			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
@@ -1667,7 +1685,17 @@ int OPEL_Server::file_write(IN const char *filePath, \
 	if(NULL != ack_file_handler){
 		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
 			comm_log("cvs insert error");
-		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
+		int iter_ra;
+		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = op_server;
+				break;
+			}
+		}
+		if(MAX_REQ_LEN == iter_ra)
+			comm_log("Plz I don't wanna see this");
+		else
+			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	/*	data = (uint8_t *)malloc(sizeof(uint8_t) * len);
@@ -1840,8 +1868,19 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 	if(UV_ECANCELED == status)
 		return;
 	comm_log("cvs_len:%d", cvs->getLen());
-	if(cvs->getLen() > 0)
-		uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
+	if(cvs->getLen() > 0){
+		int iter_ra;
+		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = op_server;
+				break;
+			}
+		}
+		if(MAX_REQ_LEN == iter_ra)
+			comm_log("I don't wanna see this");
+		else
+			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+	}
 	if(!op_server->write_queue.isEmptyQueue()){
 		uv_queue_work(uv_default_loop(), &op_server->write_req, generic_write_handler, after_write_handler);
 	}
@@ -1918,7 +1957,7 @@ void OPEL_Server::SetServerHandler(IN Comm_Handler serv_handler)
 /* OPEL_Client Implementation */
 OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 {
-	int sock;
+	int i,sock;
 
 	if(NULL == intf_name){
 		comm_log("NULL pointer error");
@@ -1950,14 +1989,15 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 	connect_req.data = (void *)this;
 	write_req.data = (void *)this;
 	read_req.data = (void *)this;
-	ra_req.data = (void *)this;
+	for(i=0; i<MAX_REQ_LEN; i++)
+		ra_req.data = NULL;
 
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
 }
 OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm_Handler onConnect)
 {
-	int sock;
+	int i,sock;
 
 	if(NULL == intf_name){
 		comm_log("NULL pointer error");
@@ -1994,7 +2034,9 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 	connect_req.data = (void *)this;
 	write_req.data = (void *)this;
 	read_req.data = (void *)this;
-	ra_req.data = (void *)this;
+	
+	for(i=0; i<MAX_REQ_LEN; i++)
+		ra_req[i].data = NULL;
 
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
@@ -2445,7 +2487,17 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 
 	if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
-		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
+		int iter_ra;
+		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = op_server;
+				break;
+			}
+		}
+		if(iter_ra == MAX_REQ_LEN)
+			comm_log("Plz... I don't wanna see this");
+		else
+			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	queue_data->buff = (uint8_t *)malloc(sizeof(uint8_t) * (OPEL_HEADER_SIZE + len));
@@ -2521,7 +2573,17 @@ int OPEL_Client::file_write(IN const char *filePath, \
 	if(NULL != ack_file_handler){
 		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
 			comm_log("cvs insert error");
-		uv_queue_work(uv_default_loop(), &ra_req, generic_ra_handler, after_ra_handler);
+		int iter_ra;
+		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = op_server;
+				break;
+			}
+		}
+		if(iter_ra == MAX_REQ_LEN)
+			comm_log("Plz I don't wanna see this");
+		else
+			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	empty = write_queue.isEmptyQueue();
@@ -2659,8 +2721,19 @@ void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 	if(UV_ECANCELED == status)
 		return;
 
-	if(op_client->cvs->getLen() > 0)
-		uv_queue_work(uv_default_loop(), &op_client->ra_req, generic_ra_handler, after_ra_handler);
+	if(op_client->cvs->getLen() > 0){
+		int iter_ra;
+		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = op_server;
+				break;
+			}
+		}
+		if(iter_ra == MAX_REQ_LEN)
+			comm_log("plz I don't wanna see this");
+		else
+			uv_queue_work(uv_default_loop(), &op_client->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+	}
 	if(op_client->write_queue.isEmptyQueue() == FALSE)
 		uv_queue_work(uv_default_loop(), &op_client->write_req, generic_write_handler, after_write_handler);
 }

@@ -309,7 +309,7 @@ class OPEL_Server
 		int closing;	//What is this for?
 		uv_work_t write_req;
 		uv_work_t read_req;
-		uv_work_t ra_req;
+		uv_work_t ra_req[MAX_REQ_LEN];
 
 		cv_set *cvs;
 
@@ -360,7 +360,7 @@ class OPEL_Client
 		uv_work_t connect_req;
 		uv_work_t write_req;
 		uv_work_t read_req;
-		uv_work_t ra_req;
+		uv_work_t ra_req[MAX_REQ_LEN];
 
 		cv_set *cvs;
 
