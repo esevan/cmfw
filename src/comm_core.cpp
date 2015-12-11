@@ -1722,6 +1722,8 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		OPEL_MSG *ack_msg = ack_data->op_msg;
 		ack_data->handler = ack_msg_handler;
 		ack_msg->set_req_id(op_msg->get_req_id());
+		ack_msg->complete_header();
+		
 		comm_log("inserted %d", ack_msg->get_req_id());
 		rqs->insert(ack_data);
 	}
@@ -1840,6 +1842,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		OPEL_MSG *ack_msg = ack_data->op_msg;
 		ack_data->handler = ack_file_handler;
 		ack_msg->set_req_id(op_msg->get_req_id());
+		ack_msg->complete_header();
 		comm_log("Inserted : %d,%d", ack_msg->get_req_id(), op_msg->get_req_id());
 		rqs->insert(ack_data);
 	}
@@ -2713,6 +2716,7 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 		OPEL_MSG *ack_msg = ack_data->op_msg;
 		ack_data->handler = ack_msg_handler;
 		ack_msg->set_req_id(op_msg->get_req_id());
+		ack_msg->complete_header();
 		comm_log("Inserted : %d,%d", ack_msg->get_req_id(), op_msg->get_req_id());
 		rqs->insert(ack_data);
 	}
@@ -2808,6 +2812,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 		OPEL_MSG *ack_msg = ack_data->op_msg;
 		ack_data->handler = ack_file_handler;
 		ack_msg->set_req_id(op_msg->get_req_id());
+		ack_msg->complete_header();
 
 		comm_log("Inserted : %d,%d", ack_msg->get_req_id(), op_msg->get_req_id());
 		rqs->insert(ack_data);
