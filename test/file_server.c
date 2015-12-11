@@ -33,13 +33,14 @@ void onRead(OPEL_MSG *op_msg, int status)
 		exit(1);
 	}
 
-	printf("get_data:%s\n", (char *)op_msg->get_data());
 	gettimeofday(&init_time, NULL);
 
 	if(!strcmp("File Transfer Test Start", op_msg->get_data())){
+		printf("get_data:%s\n", (char *)op_msg->get_data());
 		ser->file_write("./res/cmfw.tar.gz",NULL,onCmfw);
 	}
 	else if(!strcmp("cmfw.tar.gz", op_msg->get_data())){
+		printf("get_data:%s\n", (char *)op_msg->get_data());
 		ser->file_write("./res/cmfw.tar.gz", op_msg, NULL);
 	}
 	else
@@ -51,8 +52,8 @@ void onCmfw(OPEL_MSG *op_msg, int status)
 {
 	printf("onCmfw\n");
 	if(!status && NULL != op_msg){
-		printf("Got data : %s\n", (char *)op_msg->get_data());
-		if(op_msg->is_special()){
+		if(op_msg->is_msg() || op_msg->is_special()){
+			printf("Got data : %s\n", (char *)op_msg->get_data());
 			printf("Server file transfer pass\n");
 			ser->msg_write("Really?", strlen("Really?")+1, op_msg);
 		}

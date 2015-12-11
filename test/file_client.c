@@ -60,8 +60,8 @@ void onRead(OPEL_MSG *op_msg, int status)
 		else
 			printf("%ld.%ld]OnRead\n", tmp_time.tv_sec-init_time.tv_sec, tmp_time.tv_usec-init_time.tv_usec);
 
-		printf("Got Msg:%s\n", (char *)op_msg->get_data());
-		if(op_msg->is_special())
+		if(op_msg->is_msg() || op_msg->is_special())
+			printf("Got Msg:%s\n", (char *)op_msg->get_data());
 			cli->file_write(fname, op_msg, onAck);
 	}
 	else{
@@ -73,8 +73,8 @@ void onAck(OPEL_MSG *op_msg, int status)
 {
 	printf("OnAck called\n");
 	if(!status && NULL != op_msg){
-		printf("Got data : %s\n", (char *)op_msg->get_data());
 		if(op_msg->is_msg() || op_msg->is_special()){
+			printf("Got data : %s\n", (char *)op_msg->get_data());
 			cli->msg_write("cmfw.tar.gz", strlen("cmfw.tar.gz")+1, NULL, onAck2);
 		}
 		
@@ -86,8 +86,9 @@ void onAck(OPEL_MSG *op_msg, int status)
 void onAck2(OPEL_MSG *op_msg, int status)
 {
 	if(!status && NULL != op_msg){
-		printf("OnAck2]Got data: %s\n", (char *)op_msg->get_data());
-		if(op_msg->is_msg() || op_msg->is_special())
+		if(op_msg->is_msg() || op_msg->is_special()){
+			printf("OnAck2]Got data: %s\n", (char *)op_msg->get_data());
 			printf("Congratulation");
+		}
 	}
 }
