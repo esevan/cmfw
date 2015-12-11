@@ -52,6 +52,9 @@ void onCmfw(OPEL_MSG *op_msg, int status)
 	printf("onCmfw\n");
 	if(!status && NULL != op_msg){
 		printf("Got data : %s\n", (char *)op_msg->get_data());
+		if(op_msg->is_special()){
+			printf("Server file transfer pass\n");
+		}
 	}
 	else
 		printf("Failed\n");

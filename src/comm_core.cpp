@@ -2105,8 +2105,10 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 				server_handler(op_msg, op_msg->get_err());
 			else
 				comm_log("ra error");
-			
-			if(!queue_data->attached)
+			if(op_msg->is_file() && !op_msg->is_special()){
+				op_server->rqs->insert(queue_data);
+			}
+			else if(!queue_data->attached)
 				delete queue_data;
 
 		}
@@ -3036,7 +3038,10 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 			else
 				comm_log("ra_ error");
 
-			if(!queue_data->attached)
+			if(op_msg->is_file() && !op_msg->is_special()){
+				op_client->rqs->insert(queue_data);
+			}
+			else if(!queue_data->attached)
 				delete queue_data;
 
 		}
