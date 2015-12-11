@@ -724,7 +724,7 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 	}
 
 	if(search(reqid, &stat) >= 0){
-		comm_log("reqid duplicated");
+		comm_log("reqid duplicated(%d:%d)", reqid,stat);
 		return -1;
 	}
 
@@ -941,7 +941,6 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 					handlers[i] = NULL;
 					cv_bitmap &=~(0x01<<i);
 					uv_cond_signal(&cv[i]);
-
 				}
 			}
 			else if(CV_STAT_REM == status[i]){
