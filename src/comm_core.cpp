@@ -877,90 +877,98 @@ int cv_set::wait(int i, uint32_t timeout)
 		res = 0;
 		status[i] = CV_STAT_WAIT;
 		tmout = uv_cond_timedwait(&cv[i], &cv_mutex[i], timeout*SECFROMNANO);
-			uv_cond_signal(&notWaiting[i]);
-		}
-		uv_mutex_unlock(&cv_mutex[i]);
-
-		if(res != -1){
-			uv_mutex_lock(&cv_bitmap_mutex);
-			cv_len--;
-			uv_mutex_unlock(&cv_bitmap_mutex);
-		}
 		if(tmout != 0){
-			res = 1;
+			status[i] = CV_STAT_INIT;
+			req[i] = 0;
+			handlers[i] = NULL;
 		}
 
-		return res;
+		uv_cond_signal(&notWaiting[i]);
+	}
+	uv_mutex_unlock(&cv_mutex[i]);
+
+	if(tmout != 0){
+		res = 1;
+		uv_mutex_lock(&cv_bitmap_mutex);
+		cv_len--;
+		cv_bitmap &=~(0x01<<i);
+		uv_mutex_unlock(&cv_bitmap_mutex);
 	}
 
-	//When ack comes, enqueue to ack queue and signal to waiting thread.
-	//Timing for ack to come:
-	//Insert (Ready) -> Write -> (here) -> Wait (WAIT) -> (here) -> Timeout(REM) -> (here) -> Remove
-	int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *queue_data)
-	{
-		int i, res = -1;
+	return res;
+}
 
-		uv_mutex_lock(&cv_bitmap_mutex);
-		for(i=0; i<MAX_REQ_LEN; i++){
-			uv_mutex_lock(&cv_mutex[i]);
-			if(reqid == req[i]){
-				res = -2;
-				comm_log("Stat:%d", status[i]);
-				if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
-					res = i;
-					if(NULL != queue_data){
-						comm_log("Handler Addr:%x", handlers[i]);
-						queue_data->handler = handlers[i];
-						if(NULL != queue){
-							if(COMM_S_OK != queue->enqueue(queue_data))
-								res = -1;
-							else
-								comm_log("queue inserted");
-						}
-					}
-					if(CV_STAT_READY == status[i]){
-						// NO need to wait but remove this cv
-						status[i] = CV_STAT_INIT;
-						req[i] = 0;
-						handlers[i] = NULL;
-						cv_bitmap &=~(0x01<<i);
-						cv_len--;
-					}
-					else if(CV_STAT_WAIT == status[i]){
-						//Normal Case
-						comm_log("Hit!");
-						status[i] = CV_STAT_REM;
-						req[i] = 0;
-						uv_cond_signal(&cv[i]);
+//When ack comes, enqueue to ack queue and signal to waiting thread.
+//Timing for ack to come:
+//Insert (Ready) -> Write -> (here) -> Wait (WAIT) -> (here) -> Timeout(REM) -> (here) -> Remove
+int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *queue_data)
+{
+	int i, res = -1;
 
+	uv_mutex_lock(&cv_bitmap_mutex);
+	for(i=0; i<MAX_REQ_LEN; i++){
+		uv_mutex_lock(&cv_mutex[i]);
+		if(reqid == req[i]){
+			res = -2;
+			comm_log("Stat:%d", status[i]);
+			if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
+				res = i;
+				if(NULL != queue_data){
+					comm_log("Handler Addr:%x", handlers[i]);
+					queue_data->handler = handlers[i];
+					if(NULL != queue){
+						if(COMM_S_OK != queue->enqueue(queue_data))
+							res = -1;
+						else
+							comm_log("queue inserted");
 					}
 				}
-				else if(CV_STAT_REM == status[i]){
-					comm_log("This is what i expeceted");
+				if(CV_STAT_READY == status[i]){
+					// NO need to wait but remove this cv
+					status[i] = CV_STAT_INIT;
+					req[i] = 0;
+					handlers[i] = NULL;
+					cv_bitmap &=~(0x01<<i);
+					cv_len--;
+				}
+				else if(CV_STAT_WAIT == status[i]){
+					//Normal Case
+					comm_log("Hit!");
+					status[i] = CV_STAT_INIT;
+					req[i] = 0;
+					handler[i] = NULL;
+					cv_bitmap &=~(0x01<<i);
+					cv_len--;
+					uv_cond_signal(&cv[i]);
+
 				}
 			}
-			uv_mutex_unlock(&cv_mutex[i]);
-			if(res != -1)
-				break;
+			else if(CV_STAT_REM == status[i]){
+				comm_log("This is what i expeceted");
+			}
 		}
-		uv_mutex_unlock(&cv_bitmap_mutex);
-
-		return res;
+		uv_mutex_unlock(&cv_mutex[i]);
+		if(res != -1)
+			break;
 	}
-	//
+	uv_mutex_unlock(&cv_bitmap_mutex);
 
-	/* OPEL_Server Implementation */
-	OPEL_Server::OPEL_Server(const char *intf_name)
-	{
+	return res;
+}
+//
 
-		int sock;
+/* OPEL_Server Implementation */
+OPEL_Server::OPEL_Server(const char *intf_name)
+{
 
-		if(NULL == intf_name){
-			comm_log("Null pointer error");
-			return;
-		}
-		else
-			comm_log("%s server opening...", intf_name);
+	int sock;
+
+	if(NULL == intf_name){
+		comm_log("Null pointer error");
+		return;
+	}
+	else
+		comm_log("%s server opening...", intf_name);
 
 		strncpy(this->intf_name, intf_name, MAX_NAME_LEN);
 
@@ -1855,9 +1863,6 @@ void OPEL_Server::generic_ra_handler(uv_work_t *req)
 			break;
 	}
 
-	if(res >= 0)
-		cvs->gc();
-
 	//If full wait
 	if(res == 1){
 		//Nothing to do
@@ -1874,7 +1879,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	Comm_Handler server_handler = op_server->server_handler;
 
 	op_server->num_threads--;
-	comm_log("ra thread down %d", op_server->num_threads);
+	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
 
 	if(UV_ECANCELED == status)
 		return;
