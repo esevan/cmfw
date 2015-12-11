@@ -2577,24 +2577,27 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				}
 			}
 			else {
-/*
-				int req_err = op_client->cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
-				*/
+				/*
+				   int req_err = op_client->cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
+				 */
 
 				op_client->rqs->signal(op_msg->get_req_id(), queue_data);
 				comm_log("Ack comes:%s", op_msg->get_data());
-/*
-				if(req_err < 0){
-					if(!queue_data->attached) delete queue_data;
-					else
-						comm_log("Tried to delete, but attached");
+				/*
+				   if(req_err < 0){
+				   if(!queue_data->attached) delete queue_data;
+				   else
+				   comm_log("Tried to delete, but attached");
 
-					//err = SOCKET_ERR_FAIL;
+				//err = SOCKET_ERR_FAIL;
 
-					break;
+				break;
 				}
-				*/
+				 */
 			}
+			if(NULL == queue_data)
+				comm_log("??");
+			if(!queue_data->attached) delete queue_data;
 
 		}
 		else{
@@ -2602,9 +2605,6 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 			err = SOCKET_ERR_FAIL;
 		}
 
-		if(NULL == queue_data)
-			comm_log("??");
-		if(!queue_data->attached) delete queue_data;
 	}while(0);
 
 	if(SOCKET_ERR_NONE != err){
