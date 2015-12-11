@@ -729,9 +729,11 @@ void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
 		uv_mutex_unlock(&lock);
 	}
 	else{
+		comm_log("got?");
 		uv_mutex_lock(&lock);
 		for(i=0; i<MAX_REQ_LEN; i++){
 			if(qdts[i] != NULL && qdts[i]->op_msg->get_req_id() == reqId){
+				comm_log("oops?got?");
 				if(NULL == qdt){
 					comm_log("If not refreshed, then must put queue data first");
 				}
@@ -761,6 +763,7 @@ int req_set::insert(queue_data_t *qdt)
 			break;
 		for(i=0; i<MAX_REQ_LEN; i++){
 			if(NULL == qdts[i]){
+					comm_log("got?");
 				res = 0;
 				qdts[i] = qdt;
 				tout[i] = MAX_FILE_TIMEOUT;
