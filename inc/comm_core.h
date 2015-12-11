@@ -191,7 +191,7 @@ class queue_data_t
 		OPEL_MSG *op_msg;
 
 		comm_queue_t queue;
-		bool attached;
+		int attached;
 
 		int sock_pos;
 		int cv_num; //for Req queue
