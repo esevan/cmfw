@@ -38,7 +38,6 @@ TEST_ODIR=./test/obj
 #libcommcore.so.1: comm_bt.o comm_core.o
 #	gcc -shared -Wl,-soname,libcommcore.so.1 -o $(LDIR)/libcommcore.so $(IDIR)/comm_util.h $(ODIR)/comm_bt.o $(ODIR)/comm_core.o
 
-#Compile test
 
 _test=msg_server msg_client file_server file_client
 test_bin=$(patsubst %,$(TEST_BIN)/%,$(_test))
