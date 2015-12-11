@@ -742,7 +742,7 @@ int cv_set::insert(uint32_t reqid, Comm_Handler handler)
 		cv_bitmap |= 0x01 << pos;
 		req[pos] = reqid;
 		handlers[pos] = handler;
-		comm_log("Inserted handler:%x:%x", handler, handlers[pos]);
+		comm_log("Inserted handler(%d:%d)-%x:%x", pos, req[pos], handler, handlers[pos]);
 		status[pos] = CV_STAT_READY;
 		uv_mutex_unlock(&cv_mutex[pos]);
 
