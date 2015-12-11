@@ -907,6 +907,7 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 		uv_mutex_lock(&cv_mutex[i]);
 		if(reqid == req[i]){
 			res = -2;
+			comm_log("Stat:%d", status[i]);
 			if(CV_STAT_INIT != status[i] && CV_STAT_REM != status[i]){
 				res = i;
 				if(NULL != queue_data){
