@@ -669,6 +669,105 @@ int socket_set::length()
 //
 ////
 
+/* req_set Implementation */
+req_set::req_set(OPEL_Comm_Queue *ackQueue)
+{
+	int i;
+	for(i=0; i<MAX_REQ_LEN; i++){
+		tout[i] = -1;
+		qdts[i] = NULL;
+	}
+	this->ackQueue = ackQueue;
+	uv_cond_init(&inserted);
+	uv_mutex_init(&lock);
+}
+req_set::~req_set()
+{
+	for(i=0; i<MAX_REQ_LEN; i++)
+		req[i] = 0;
+}
+int req_set::wait(uint32_t timeout)
+{
+	int i, res = -1;
+	uv_mutex_lock(&lock);
+	res = uv_cond_timedwait(&inserted, &lock, timeout*SECFROMNANO);
+	if(res < 0){
+		for(i=0; i<MAX_REQ_LEN; i++){
+			if(qdts[i] != NULL){
+				tout[i]--;
+				if(tout[i] == 0){
+					//REQ Processing in need?
+					char *to_str = "Time out...";
+					OPEL_MSG *op_msg = qdts[i]->op_msg;
+					op_msg->set_data(to_str, strlen(to_str)+1);
+					op_msg->set_err(SOCKET_ERR_TOUT);
+					ackQueue->enqueue(qdts[i]);
+					qdts[i] = NULL;
+					tout[i] = -1;;
+				}
+			}
+		}
+	}
+	uv_mutex_unlock(&lock);
+}
+
+// Read qdt has no 
+void req_set::signal(int reqId, queue_data_t *qdt, int refresh)
+{
+	int i, res = 0;
+	if(refresh){
+		uv_mutex_lock(&lock);
+		for(i=0; i<MAX_REQ_LEN; i++){
+			if(qdts[i] != NULL && qdts[i]->get_req_id() == reqId){
+				tout[i] = MAX_FILE_TIMEOUT;
+				break;
+			}
+		}
+		uv_mutex_unlock(&lock);
+	}
+	else{
+		uv_mutex_lock(&lock);
+		for(i=0; i<MAX_REQ_LEN; i++){
+			if(qdts[i] != NULL && qdt[i]->get_req_id() == reqId){
+				if(NULL == qdt){
+					comm_log("If not refreshed, then must put queue data first");
+				}
+				else{
+					res = 1;
+					qdt->handler = qdts[i]->handler;
+					ackQueue->enqueue(qdt);
+					delete qdts[i];
+					qdts[i] = NULL;
+					tout[i] = -1;
+				}
+			}
+		}
+		if(res == 1)
+			uv_cond_signal(&inserted);
+		uv_mutex_unlock(&lock);
+	}
+
+}
+int req_set::insert(queue_data *qdt)
+{
+	int i, res = -1;
+	uv_mutex_lock(&lock);
+	do{
+		if(!qdt)
+			break;
+		for(i=0; i<MAX_REQ_LEN; i++){
+			if(NULL == qdts[i]){
+				res = 0;
+				qdts[i] = qdt;
+				tout[i] = MAX_MSG_TIMEOUT;
+				break;
+			}
+		}
+	}while(0);
+	uv_mutex_unlock(&unlock);
+
+	return res;
+}
 
 /* cv_set Implementation */
 cv_set::cv_set()
@@ -998,7 +1097,8 @@ OPEL_Server::OPEL_Server(const char *intf_name)
 
 	server_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
 	clients = new socket_set();
-	cvs = new cv_set();
+	//cvs = new cv_set();
+	rqs = new req_set(&ack_queue);
 
 	read_req.data = (void *)this;
 	write_req.data = (void *)this;
@@ -1052,7 +1152,8 @@ OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
 
 	server_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
 	clients = new socket_set();
-	cvs = new cv_set();
+	//cvs = new cv_set();
+	rqs = new req_set(&ack_queue);
 
 	read_req.data = (void *)this;
 	write_req.data = (void *)this;
@@ -1078,8 +1179,9 @@ OPEL_Server::~OPEL_Server()
 		delete bt_ops;
 	if(NULL != clients)
 		delete clients;
-	if(NULL != cvs)
+	/*if(NULL != cvs)
 		delete cvs;
+		*/
 }
 
 /* Phase 1: Select for if it is server or client
@@ -1335,38 +1437,36 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					  }*/
 				}
 			}
-			else{//It's last
-				int pathlen, cur;
-				char *path;
-				char fname[256];
-				char *tmp_msg = "File:";
-				char *msg_data;
+			int pathlen, cur;
+			char *path;
+			char fname[256];
+			char *tmp_msg = "File:";
+			char *msg_data;
 
-				if(NULL != data)
-					comm_log("Special, but msg-piggy-backing not supproted");
-				else{
+			if(NULL != data)
+				comm_log("Special, but msg-piggy-backing not supproted");
+			else{
 
-					//File Path parsing 
-					path = op_msg->get_file_name();
-					pathlen = strlen(path);
-					cur = pathlen;
-					while(path[cur] != '/'){
-						cur --;
-						if(cur < 0)
-							break;
-					}
-					cur++;
-
-					sprintf(fname, "./data/%s", &path[cur]);
-					comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
-
-					msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
-					strcpy(msg_data, tmp_msg);
-					strcat(msg_data, fname);
-
-					op_msg->set_data(msg_data, strlen(msg_data) +1);
-					comm_log("%s received", msg_data);
+				//File Path parsing 
+				path = op_msg->get_file_name();
+				pathlen = strlen(path);
+				cur = pathlen;
+				while(path[cur] != '/'){
+					cur --;
+					if(cur < 0)
+						break;
 				}
+				cur++;
+
+				sprintf(fname, "./data/%s", &path[cur]);
+				comm_log("File name : %s(%d)", fname, op_msg->get_file_offset());
+
+				msg_data = (char *)malloc(strlen(fname)+strlen(tmp_msg)+1);
+				strcpy(msg_data, tmp_msg);
+				strcat(msg_data, fname);
+
+				op_msg->set_data(msg_data, strlen(msg_data) +1);
+				comm_log("%s(%d) received", msg_data, op_msg->get_file_offset());
 			}
 		}
 		else{
@@ -1424,24 +1524,21 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			comm_log("No server handler exists, droped the data");
 		}
 		else {
+			/*
 			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
 			if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
 				comm_log("Here error");
 			}
+			*/
 
-			comm_log("Ack comes(%d)", req_err);
+			op_server->rqs->signal(op_msg->get_req_id(), queue_data);
+			comm_log("Ack Comes");
+
 
 			/*
 			   Ack comes, but no request wating.
 			   Too late ack.
 			 */
-			if(req_err < 0){
-				if(!queue_data->attached) delete queue_data;
-				else
-					comm_log("tried to delete, but attached");
-
-				continue;
-			}
 		}
 	}
 
@@ -1492,7 +1589,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		   comm_log("cvs(%d)", op_server->cvs->getLen());
 		   }
 		 */
-
+/*
 		if(op_server->cvs->getLen() > 0){
 			int iter_ra;
 			for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
@@ -1508,6 +1605,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 				uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 			}
 		}
+		*/
 		if(op_server->read_queue.isEmptyQueue()){
 			uv_queue_work(uv_default_loop(), &op_server->read_req, generic_read_handler, after_read_handler);
 			break;
@@ -1524,8 +1622,6 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		if(!queue_data->attached){
 			delete queue_data;
 		}
-		else
-			comm_log("tried to delete, but attached");
 	}
 
 	return;
@@ -1588,7 +1684,7 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 	memcpy(data, buf, len);
 	op_msg->set_data(data, len);
 	comm_log("set_Ack %d", op_msg->is_ack());
-	if(NULL != ack_msg_handler){
+	/*if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
@@ -1601,6 +1697,14 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 			comm_log("Plz I don't wanna see this");
 		else
 			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+	}
+	*/
+	if(NULL != ack_msg_handler){
+		queue_data_t *ack_data = new queue_data_t(op_socket);
+		OPEL_MSG *ack_msg = ack_data->op_msg;
+		ack_data->handler = ack_msg_handler;
+		ack_msg->set_req_id(op_msg->get_req_id());
+		rqs->insert(ack_data);
 	}
 
 	queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
@@ -1696,7 +1800,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 	//		len = MAX_DAT_LEN;
 	//	}
 
-	if(NULL != ack_file_handler){
+	/*if(NULL != ack_file_handler){
 		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
 			comm_log("cvs insert error");
 		int iter_ra;
@@ -1711,6 +1815,15 @@ int OPEL_Server::file_write(IN const char *filePath, \
 		else
 			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
+	*/
+	if(NULL != ack_msg_handler){
+		queue_data_t *ack_data = new queue_data_t(op_socket);
+		OPEL_MSG *ack_msg = ack_data->op_msg;
+		ack_data->handler = ack_file_handler;
+		ack_msg->set_req_id(op_msg->get_req_id());
+		rqs->insert(ack_data);
+	}
+
 
 	/*	data = (uint8_t *)malloc(sizeof(uint8_t) * len);
 		queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
@@ -1764,7 +1877,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 	OPEL_Socket *op_socket;
 	int len;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
-	cv_set *cvs = op_server->cvs;
+//	cv_set *cvs = op_server->cvs;
 	op_server->num_threads++;
 	comm_log("write thread up %d", op_server->num_threads);
 
@@ -1850,39 +1963,41 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			}
 			new_msg->complete_header();
 
-			op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, new_queue_data);
+			/*op_server->cvs->sch_to_sig(op_msg->get_req_id(), NULL, new_queue_data);
 			if(0>op_server->cvs->insert(op_msg->get_req_id(), new_queue_data->handler)){
 				comm_log("ReqId:%d, Hnadler:%x", op_msg->get_req_id(), new_queue_data->handler);
 			}
+			*/
+			op_server->rqs->signal(op_msg->get_req_id(), NULL, 1);
+
+
 			op_server->write_queue.enqueue(new_queue_data);
 		}
 	}
 
 	if(!queue_data->attached)
 		delete queue_data;
-	else
-		comm_log("tried to delete, but attached");
-
 
 	return;
 
 WRITE_HANDLER_ERR:
 	op_msg->set_err(err);
 
-	cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
+	//cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
+	rqs->signal(op_msg->get_req_id(), queue_data);
 	return;
 }
 
 void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 {
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
-	cv_set *cvs = op_server->cvs;
+	//cv_set *cvs = op_server->cvs;
 	op_server->num_threads--;
 	comm_log("write thread down %d", op_server->num_threads);
 	if(UV_ECANCELED == status)
 		return;
-	comm_log("cvs_len:%d", cvs->getLen());
-	if(cvs->getLen() > 0){
+	//comm_log("cvs_len:%d", cvs->getLen());
+	/*if(cvs->getLen() > 0){
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
 			if(op_server->ra_req[iter_ra].data == NULL){
@@ -1895,6 +2010,7 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 		else
 			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
+	*/
 	if(!op_server->write_queue.isEmptyQueue()){
 		uv_queue_work(uv_default_loop(), &op_server->write_req, generic_write_handler, after_write_handler);
 	}
@@ -1904,25 +2020,37 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 
 void OPEL_Server::generic_ra_handler(uv_work_t *req)
 {
-	int i, res = -1;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
-	cv_set *cvs = op_server->cvs;
+	int res;
 	op_server->num_threads++;
-
 	comm_log("ra thread up %d", op_server->num_threads);
 
-	for(i=0; i<MAX_REQ_LEN; i++){
-		res = cvs->wait(i, MAX_MSG_TIMEOUT);
-		if(res >= 0)
+	while(TRUE){
+		res = op_server->rqs->wait(MAX_MSG_TIMEOUT);
+		if(res >= 0) //Timed Out data (already in ack queue) or someone inserted ack
 			break;
 	}
+	/*
+	   int i, res = -1;
+	   OPEL_Server *op_server = (OPEL_Server *)req->data;
+	   cv_set *cvs = op_server->cvs;
+	   op_server->num_threads++;
+
+	   comm_log("ra thread up %d", op_server->num_threads);
+
+	   for(i=0; i<MAX_REQ_LEN; i++){
+	   res = cvs->wait(i, MAX_MSG_TIMEOUT);
+	   if(res >= 0)
+	   break;
+	   }
 
 	//If full wait
 	if(res == 1){
-		//Nothing to do
-	}
+//Nothing to do
+}
 
-	return;
+return;
+	 */
 }
 
 void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
@@ -1932,37 +2060,63 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
 	Comm_Handler server_handler = op_server->server_handler;
 
-	op_server->num_threads--;
-	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
-	if(op_server->num_threads < 0)
-		exit(1);
-
-	do{
-		if(UV_ECANCELED == status){
-			comm_log("ra error");
-			break;
-		}
-
+	if(UV_ECANCELED == status){
+		comm_log("Canceled");
+		return;
+	}
+	while(TRUE){
 		queue_data = op_server->ack_queue.dequeue();
 		if(NULL == queue_data){
-			comm_log("ra no queue data:Writing? OK!");
+			uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
 			break;
 		}
+		else{
+			op_msg = queue_data->op_msg;
+			if(queue_data->handler)
+				queue_data->call_handler();
+			else if(NULL != server_handler)
+				server_handler(op_msg, op_msg->get_err());
+			else
+				comm_log("ra error");
+			
+			if(!queue_data->attached)
+				delete queue_data;
 
-		op_msg = queue_data->op_msg;
+		}
+	}
+	/*
+	   op_server->num_threads--;
+	   comm_log("ra thread down(%d),%d", status,op_server->num_threads);
+	   if(op_server->num_threads < 0)
+	   exit(1);
 
-		if(queue_data->handler)
-			queue_data->call_handler();
-		else if(NULL != server_handler)
-			server_handler(op_msg, op_msg->get_err());
-		else
-			comm_log("ra error");
+	   do{
+	   if(UV_ECANCELED == status){
+	   comm_log("ra error");
+	   break;
+	   }
 
-		delete queue_data;
-	}while(0);
+	   queue_data = op_server->ack_queue.dequeue();
+	   if(NULL == queue_data){
+	   comm_log("ra no queue data:Writing? OK!");
+	   break;
+	   }
 
-	req->data =NULL;
-	comm_log("ra data NULL");
+	   op_msg = queue_data->op_msg;
+
+	   if(queue_data->handler)
+	   queue_data->call_handler();
+	   else if(NULL != server_handler)
+	   server_handler(op_msg, op_msg->get_err());
+	   else
+	   comm_log("ra error");
+
+	   delete queue_data;
+	   }while(0);
+
+	   req->data =NULL;
+	   comm_log("ra data NULL");
+	 */
 
 	return;
 }
@@ -2003,7 +2157,8 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 	connected = FALSE;
 
 	serv_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
-	cvs = new cv_set();
+//	cvs = new cv_set();
+	rqs = new req_set(&ack_queue);
 
 	connect_req.data = (void *)this;
 	write_req.data = (void *)this;
@@ -2048,7 +2203,8 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 	connected = FALSE;
 
 	serv_sock = new OPEL_Socket(sock, CONNECTION_TYPE_BT);
-	cvs = new cv_set();
+	//cvs = new cv_set();
+	rqs = new req_set(&ack_queue);
 
 	connect_req.data = (void *)this;
 	write_req.data = (void *)this;
@@ -2071,8 +2227,10 @@ OPEL_Client::~OPEL_Client()
 	}
 	if(NULL != bt_ops)
 		delete bt_ops;
-	if(NULL != cvs)
-		delete cvs;
+	//if(NULL != cvs)
+		//delete cvs;
+	if(NULL != rqs)
+		delete rqs;
 }
 
 
@@ -2378,10 +2536,13 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				}
 			}
 			else {
-
+/*
 				int req_err = op_client->cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
-				comm_log("Ack comes:%d", req_err);
+				*/
 
+				op_client->rqs->signal(op_msg->get_req_id(), queue_data);
+				comm_log("Ack comes:%d", req_err);
+/*
 				if(req_err < 0){
 					if(!queue_data->attached) delete queue_data;
 					else
@@ -2391,6 +2552,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 
 					break;
 				}
+				*/
 			}
 
 		}
@@ -2504,7 +2666,7 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 	memcpy(data, buf, len);
 	op_msg->set_data(data, len);
 
-	if(NULL != ack_msg_handler){
+	/*if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
@@ -2517,6 +2679,14 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 			comm_log("Plz... I don't wanna see this");
 		else
 			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+	}
+	*/
+	if(NULL != ack_msg_handler){
+		queue_data_t *ack_data = new queue_data_t(op_socket);
+		OPEL_MSG *ack_msg = ack_data->op_msg;
+		ack_data->handler = ack_msg_handler;
+		ack_msg->set_req_id(op_msg->get_req_id());
+		rqs->insert(ack_data);
 	}
 
 	queue_data->buff = (uint8_t *)malloc(sizeof(uint8_t) * (OPEL_HEADER_SIZE + len));
@@ -2589,7 +2759,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 	op_msg->complete_header();
 	comm_log("File info set:%s/%s (size:%d/%d)", op_msg->get_file_name(), filePath,op_msg->get_file_size(), finfo.fsize);
 
-	if(NULL != ack_file_handler){
+	/*if(NULL != ack_file_handler){
 		if(cvs->insert(op_msg->get_req_id(), ack_file_handler) < 0)
 			comm_log("cvs insert error");
 		int iter_ra;
@@ -2603,6 +2773,14 @@ int OPEL_Client::file_write(IN const char *filePath, \
 			comm_log("Plz I don't wanna see this");
 		else
 			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+	}
+	*/
+	if(NULL != ack_msg_handler){
+		queue_data_t *ack_data = new queue_data_t(op_socket);
+		OPEL_MSG *ack_msg = ack_data->op_msg;
+		ack_data->handler = ack_file_handler;
+		ack_msg->set_req_id(op_msg->get_req_id());
+		rqs->insert(ack_data);
 	}
 
 	empty = write_queue.isEmptyQueue();
@@ -2622,7 +2800,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 	OPEL_MSG *op_msg;
 	int wval;
 	OPEL_Socket *op_socket, *serv_sock = op_client->serv_sock;
-	cv_set *cvs = op_client->cvs;
+	//cv_set *cvs = op_client->cvs;
 	uint32_t len;
 	op_client->num_threads++;
 	comm_log("write thread up %d", op_client->num_threads);
@@ -2714,8 +2892,13 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 				}
 				new_msg->complete_header();
 
+				/*
+
 				cvs->sch_to_sig(op_msg->get_req_id(), NULL, new_queue_data);
 				cvs->insert(op_msg->get_req_id(), new_queue_data->handler);
+				*/
+				op_client->rqs->signal(op_msg->get_req_id(), NULL, 1);
+
 				op_client->write_queue.enqueue(new_queue_data);
 			}
 		}
@@ -2728,7 +2911,8 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 
 	if(err != SOCKET_ERR_NONE){
 		op_msg->set_err(err);
-		cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
+		//cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
+		rqs->signal(op_msg->get_req_id(), queue_data);
 	}
 }
 
@@ -2739,7 +2923,7 @@ void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 	comm_log("write thread down %d", op_client->num_threads);
 	if(UV_ECANCELED == status)
 		return;
-
+/*
 	if(op_client->cvs->getLen() > 0){
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
@@ -2753,6 +2937,7 @@ void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 		else
 			uv_queue_work(uv_default_loop(), &op_client->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
+	*/
 	if(op_client->write_queue.isEmptyQueue() == FALSE)
 		uv_queue_work(uv_default_loop(), &op_client->write_req, generic_write_handler, after_write_handler);
 }
@@ -2761,10 +2946,16 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 {
 	int i, res = -1;
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
-	cv_set *cvs = op_client->cvs;
+	//cv_set *cvs = op_client->cvs;
 	op_client->num_threads++;
 	comm_log("ra thread up %d", op_client->num_threads);
 
+	while(TRUE){
+		res = op_client->rqs->wait(MAX_MSG_TIMEOUT);
+		if(res >= 0)
+			break;
+	}
+/*
 	for(i=0; i<MAX_REQ_LEN; i++){
 		res = cvs->wait(i, MAX_FILE_TIMEOUT);
 		if(res >= 0)
@@ -2774,6 +2965,7 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 	comm_log("ra wait done:%d", res);
 
 	comm_log("ra gc done");
+	*/
 
 }
 void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
@@ -2785,6 +2977,35 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 	op_client->num_threads--;
 	comm_log("ra thread down %d", op_client->num_threads);
 
+	if(UV_ECANCELED == status){
+		comm_log("Canceled");
+		return;
+	}
+
+	while(TRUE){
+		queue_data = op_client->ack_queue.dequeue();
+		if(NULL == queue_data){
+			uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
+			break;
+		}
+		else{
+			op_msg = queue_data->op_msg;
+			if(queue_data->handler)
+				queue_data->call_handler();
+			else if(NULL != op_client->client_handler)
+				op_client->client_handler(op_msg, op_msg->get_err());
+			else
+				comm_log("ra_ error");
+
+			if(!queue_data->attached)
+				delete queue_data;
+
+		}
+	}
+
+
+
+	/*
 	do{
 
 		if(UV_ECANCELED == status)
@@ -2812,6 +3033,7 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 	}while(0);
 
 	req->data = NULL;
+	*/
 	return;
 }
 

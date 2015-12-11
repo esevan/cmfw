@@ -41,7 +41,7 @@
 #define OPEL_HEADER_SIZE 128
 #define BUFF_SIZE 1024
 #define MAX_FILE_TIMEOUT 10
-#define MAX_MSG_TIMEOUT 10
+#define MAX_MSG_TIMEOUT 1
 #define SECFROMNANO 1000000000
 
 enum {
@@ -74,7 +74,8 @@ enum{
 	SOCKET_ERR_FAIL,
 	SOCKET_ERR_FOPEN,	
 	SOCKET_ERR_FREAD,
-	SOCKET_ERR_FWRIT
+	SOCKET_ERR_FWRIT,
+	SOCKET_ERR_TOUT
 };
 
 typedef char opel_bd_name[248];
@@ -287,6 +288,21 @@ class cv_set
 		int getLen();
 };
 
+class req_set {
+	private:
+		int tout[MAX_REQ_LEN];
+		queue_data_t *qdts[MAX_REQ_LEN];
+		OPEL_Comm_Queue *ackQueue;
+		uv_mutex_t lock;
+		uv_cond_t inserted;
+	public:
+		req_set(OPEL_Comm_Queue *ackQueue);
+		~req_set();
+		int wait(uint32_t timeout);
+		int insert(queue_data_t *queue_data);
+		void signal(int reqId, queue_data_t *qdt=NULL, int refresh=0);
+};
+
 class OPEL_Server
 {
 	private:
@@ -309,9 +325,12 @@ class OPEL_Server
 		int closing;	//What is this for?
 		uv_work_t write_req;
 		uv_work_t read_req;
-		uv_work_t ra_req[MAX_REQ_LEN];
+		//uv_work_t ra_req[MAX_REQ_LEN];
+		uv_work_t ra_req;
 
-		cv_set *cvs;
+		req_set *rqs;
+
+		//cv_set *cvs;
 
 		// JS safe
 		Comm_Handler server_handler;
@@ -362,7 +381,8 @@ class OPEL_Client
 		uv_work_t read_req;
 		uv_work_t ra_req[MAX_REQ_LEN];
 
-		cv_set *cvs;
+		//cv_set *cvs;
+		req_set *rqs;
 
 		// JS safe
 		Comm_Handler client_handler;
