@@ -2562,7 +2562,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				*/
 
 				op_client->rqs->signal(op_msg->get_req_id(), queue_data);
-				comm_log("Ack comes:%d", req_err);
+				comm_log("Ack comes:");
 /*
 				if(req_err < 0){
 					if(!queue_data->attached) delete queue_data;
@@ -2933,7 +2933,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 	if(err != SOCKET_ERR_NONE){
 		op_msg->set_err(err);
 		//cvs->sch_to_sig(op_msg->get_req_id(), &op_client->ack_queue, queue_data);
-		rqs->signal(op_msg->get_req_id(), queue_data);
+		op_client->rqs->signal(op_msg->get_req_id(), queue_data);
 	}
 }
 

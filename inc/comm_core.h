@@ -379,7 +379,8 @@ class OPEL_Client
 		uv_work_t connect_req;
 		uv_work_t write_req;
 		uv_work_t read_req;
-		uv_work_t ra_req[MAX_REQ_LEN];
+		//uv_work_t ra_req[MAX_REQ_LEN];
+		uv_work_t ra_req;
 
 		//cv_set *cvs;
 		req_set *rqs;
