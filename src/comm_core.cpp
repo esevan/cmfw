@@ -1879,25 +1879,27 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	op_server->num_threads--;
 	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
 
-	if(UV_ECANCELED == status){
-		comm_log("ra error");
-		return;
-	}
+	do{
+		if(UV_ECANCELED == status){
+			comm_log("ra error");
+			break;
+		}
 
-	queue_data = op_server->ack_queue.dequeue();
-	if(NULL == queue_data){
-		comm_log("ra error");
-		return;
-	}
+		queue_data = op_server->ack_queue.dequeue();
+		if(NULL == queue_data){
+			comm_log("ra error");
+			break;
+		}
 
-	op_msg = queue_data->op_msg;
+		op_msg = queue_data->op_msg;
 
-	if(queue_data->handler)
-		queue_data->call_handler();
-	else if(NULL != server_handler)
-		server_handler(op_msg, op_msg->get_err());
-	else
-		comm_log("ra error");
+		if(queue_data->handler)
+			queue_data->call_handler();
+		else if(NULL != server_handler)
+			server_handler(op_msg, op_msg->get_err());
+		else
+			comm_log("ra error");
+	}while(0);
 
 	return;
 }
