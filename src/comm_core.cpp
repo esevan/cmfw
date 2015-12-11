@@ -1836,7 +1836,7 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 	comm_log("write thread down %d", op_server->num_threads);
 	if(UV_ECANCELED == status)
 		return;
-
+	comm_log("cvs_len:%d", cvs->getLen());
 	if(cvs->getLen() > 0)
 		uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
 	if(!op_server->write_queue.isEmptyQueue()){
