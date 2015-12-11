@@ -1881,6 +1881,8 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 
 	op_server->num_threads--;
 	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
+	if(op_server->num_threads < 0)
+		exit(1);
 
 	do{
 		if(UV_ECANCELED == status){
