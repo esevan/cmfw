@@ -2073,7 +2073,8 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	OPEL_MSG *op_msg;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
 	Comm_Handler server_handler = op_server->server_handler;
-
+	op_server->num_threads--;
+  	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
 	if(UV_ECANCELED == status){
 		comm_log("Canceled");
 		return;
@@ -2099,8 +2100,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 		}
 	}
 	/*
-	   op_server->num_threads--;
-	   comm_log("ra thread down(%d),%d", status,op_server->num_threads);
+	  
 	   if(op_server->num_threads < 0)
 	   exit(1);
 
