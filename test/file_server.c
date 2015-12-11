@@ -54,6 +54,7 @@ void onCmfw(OPEL_MSG *op_msg, int status)
 		printf("Got data : %s\n", (char *)op_msg->get_data());
 		if(op_msg->is_special()){
 			printf("Server file transfer pass\n");
+			ser->msg_write("Really?", strlen("Really?")+1, op_msg);
 		}
 	}
 	else
@@ -63,6 +64,6 @@ void onCmfw(OPEL_MSG *op_msg, int status)
 
 void file_ack_handler(OPEL_MSG *op_msg, int status)
 {
-	printf("File send done!\n");
+
 }
 
