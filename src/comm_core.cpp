@@ -2418,11 +2418,13 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						if(rCount == 0){
 							comm_log("Disconnected");
 							err = SOCKET_ERR_DISCON;
+							if(!queue_data->attached) delete queue_data;
 							break;
 						}
 						else{
 							comm_log("Read error%d/%d", rCount, op_msg->get_data_len());
 							err = SOCKET_ERR_FAIL;
+							if(!queue_data->attached) delete queue_data;
 							break;
 						}
 					}
@@ -2552,12 +2554,14 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							comm_log("Disconnected");
 
 							err = SOCKET_ERR_DISCON;
+							if(!queue_data->attached) delete queue_data;
 							break;
 						}
 						else{
 							comm_log("");
 
 							err = SOCKET_ERR_FAIL;
+							if(!queue_data->attached) delete queue_data;
 							break;
 						}
 					}
