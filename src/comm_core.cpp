@@ -1578,15 +1578,15 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_server;
+			if(op_server->ra_req[iter_ra].data == NULL){
+				op_server->ra_req[iter_ra].data = op_server;
 				break;
 			}
 		}
 		if(MAX_REQ_LEN == iter_ra)
 			comm_log("Plz I don't wanna see this");
 		else
-			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
@@ -1687,15 +1687,15 @@ int OPEL_Server::file_write(IN const char *filePath, \
 			comm_log("cvs insert error");
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_server;
+			if(op_server->ra_req[iter_ra].data == NULL){
+				op_server->ra_req[iter_ra].data = op_server;
 				break;
 			}
 		}
 		if(MAX_REQ_LEN == iter_ra)
 			comm_log("Plz I don't wanna see this");
 		else
-			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	/*	data = (uint8_t *)malloc(sizeof(uint8_t) * len);
@@ -1871,8 +1871,8 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 	if(cvs->getLen() > 0){
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_server;
+			if(op_server->ra_req[iter_ra].data == NULL){
+				op_server->ra_req[iter_ra].data = op_server;
 				break;
 			}
 		}
@@ -1944,6 +1944,8 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 		else
 			comm_log("ra error");
 	}while(0);
+
+	req->data =NULL;
 
 	return;
 }
@@ -2490,7 +2492,7 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
 			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_server;
+				ra_req[iter_ra].data = this;
 				break;
 			}
 		}
@@ -2576,7 +2578,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
 			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_server;
+				ra_req[iter_ra].data = op_client;
 				break;
 			}
 		}
@@ -2724,8 +2726,8 @@ void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 	if(op_client->cvs->getLen() > 0){
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-			if(ra_req[iter_ra].data == NULL){
-				ra_req[iter_ra].data = op_server;
+			if(op_client->ra_req[iter_ra].data == NULL){
+				op_client->ra_req[iter_ra].data = op_client;
 				break;
 			}
 		}
@@ -2766,29 +2768,33 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 	op_client->num_threads--;
 	comm_log("ra thread down %d", op_client->num_threads);
 
-	if(UV_ECANCELED == status)
-		return;
+	do{
 
-	queue_data = op_client->ack_queue.dequeue();
-	if(NULL == queue_data){
-		comm_log("No queue_data");
-		return;
-	}
+		if(UV_ECANCELED == status)
+			break;
 
-	op_msg = queue_data->op_msg;
+		queue_data = op_client->ack_queue.dequeue();
+		if(NULL == queue_data){
+			comm_log("No queue_data");
+			break;
+		}
 
-	if(queue_data->handler){
-		comm_log("Calling handler");
-		queue_data->call_handler();
-	}
-	else{
-		comm_log("Calling default handler");
-		if(NULL != op_client->client_handler)
-			op_client->client_handler(op_msg, op_msg->get_err());
-	}
+		op_msg = queue_data->op_msg;
 
-	delete queue_data;
+		if(queue_data->handler){
+			comm_log("Calling handler");
+			queue_data->call_handler();
+		}
+		else{
+			comm_log("Calling default handler");
+			if(NULL != op_client->client_handler)
+				op_client->client_handler(op_msg, op_msg->get_err());
+		}
 
+		delete queue_data;
+	}while(0);
+
+	req->data = NULL;
 	return;
 }
 
