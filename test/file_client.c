@@ -85,6 +85,9 @@ void onAck(OPEL_MSG *op_msg, int status)
 
 void onAck2(OPEL_MSG *op_msg, int status)
 {
-	if(!status && NULL != op_msg)
-		printf("Got data: %s\n", (char *)op_msg->get_data());
+	if(!status && NULL != op_msg){
+		printf("OnAck2]Got data: %s\n", (char *)op_msg->get_data());
+		if(op_msg->is_msg() || op_msg->is_special())
+			printf("Congratulation");
+	}
 }
