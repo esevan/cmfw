@@ -1578,15 +1578,15 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-			if(op_server->ra_req[iter_ra].data == NULL){
-				op_server->ra_req[iter_ra].data = op_server;
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = this;
 				break;
 			}
 		}
 		if(MAX_REQ_LEN == iter_ra)
 			comm_log("Plz I don't wanna see this");
 		else
-			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
+			uv_queue_work(uv_default_loop(), &ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 
 	queue_data->buff = (uint8_t *)malloc( sizeof(uint8_t) * (OPEL_HEADER_SIZE + len) );
@@ -1687,8 +1687,8 @@ int OPEL_Server::file_write(IN const char *filePath, \
 			comm_log("cvs insert error");
 		int iter_ra;
 		for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-			if(op_server->ra_req[iter_ra].data == NULL){
-				op_server->ra_req[iter_ra].data = op_server;
+			if(ra_req[iter_ra].data == NULL){
+				ra_req[iter_ra].data = this;
 				break;
 			}
 		}
