@@ -1504,8 +1504,8 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 			if(MAX_REQ_LEN == iter_ra)
 				comm_log("Plz I don't wanna see this");
 			else{
-				comm_log("ra inserted");
-				uv_queue_work(uv_default_loop(), &op_server->read_req, generic_ra_handler, after_ra_handler);
+				comm_log("ra inserted(%d)", iter_ra);
+				uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
 			}
 		}
 		if(op_server->read_queue.isEmptyQueue()){
