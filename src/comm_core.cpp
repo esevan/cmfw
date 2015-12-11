@@ -1555,14 +1555,18 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		}
 		else {
 			/*
-			int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
-			if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
-				comm_log("Here error");
-			}
-			*/
+			   int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
+			   if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
+			   comm_log("Here error");
+			   }
+			 */
 
 			op_server->rqs->signal(op_msg->get_req_id(), queue_data);
 			comm_log("Ack Comes");
+
+			if(op_msg->is_file() && !op_msg->is_special()){
+				op_server->rqs->insert(queue_data);
+			}
 
 			if(queue_data->attached==0) delete queue_data;
 
@@ -2131,10 +2135,10 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 				comm_log("ra error");
 			
 			queue_data->attached--;
-			if(op_msg->is_file() && !op_msg->is_special()){
-				op_server->rqs->insert(queue_data);
-			}
-			else if(queue_data->attached==0)
+			//if(op_msg->is_file() && !op_msg->is_special()){
+			//	op_server->rqs->insert(queue_data);
+			//}
+			if(queue_data->attached==0)
 				delete queue_data;
 
 		}
@@ -2609,6 +2613,10 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 
 				op_client->rqs->signal(op_msg->get_req_id(), queue_data);
 				comm_log("Ack comes:%s", op_msg->get_data());
+				if(op_msg->is_file() && !op_msg->is_special()){
+					op_server->rqs->insert(queue_data);
+				}
+
 				/*
 				   if(req_err < 0){
 				   if(queue_data->attached==0) delete queue_data;
@@ -3086,10 +3094,10 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 				comm_log("ra_ error");
 
 			queue_data->attached--;
-			if(op_msg->is_file() && !op_msg->is_special()){
-				op_client->rqs->insert(queue_data);
-			}
-			else if(queue_data->attached==0)
+			//if(op_msg->is_file() && !op_msg->is_special()){
+			//	op_client->rqs->insert(queue_data);
+			//}
+			if(queue_data->attached==0)
 				delete queue_data;
 			else
 				comm_log("%d attached", queue_data->attached);
