@@ -705,9 +705,10 @@ int req_set::wait(uint32_t timeout)
 					OPEL_MSG *op_msg = qdts[i]->op_msg;
 					op_msg->set_data(to_str, strlen(to_str)+1);
 					op_msg->set_err(SOCKET_ERR_TOUT);
+					op_msg->set_special();
 					ackQueue->enqueue(qdts[i]);
 					qdts[i] = NULL;
-					tout[i] = -1;;
+					tout[i] = -1;
 				}
 			}
 		}
@@ -1370,13 +1371,10 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 
 			}
-			else
-				data = NULL;
 
 			if(!op_msg->is_special()){//If it is the end-of-file, then nothing to do here but bring it to the ack queue later.
 				int pathlen, cur;
 				char *path;
-				op_msg->set_data(data, op_msg->get_data_len());
 				//Check!
 
 				//Make new I/O thread?, In this version this just uses this thread to process I/O
@@ -1427,7 +1425,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 				}
 
-				if(op_msg->get_data_len()!= fwrite(op_msg->get_data(), sizeof(char),\
+				if(op_msg->get_data_len()!= fwrite(data, sizeof(char),\
 							op_msg->get_data_len(), fp_tmp)){
 					comm_log("Fwrite error:%s", fname);
 					fclose(fp_tmp);
@@ -1436,6 +1434,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 						comm_log("tried to delete, but attached");
 
 					err_cli_pos = i;
+					free(data);
 
 					goto READ_CLIENT_SOCKET_CLOSE;
 
@@ -1443,6 +1442,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				else{
 					comm_log("fwrite succedded");
 					fclose(fp_tmp);
+					free(data);
 					/*if(op_msg->is_ack()){
 					  int ress;
 					  comm_log("ack wait update");
@@ -1454,6 +1454,10 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					  }*/
 				}
 			}
+			else {
+				/* Special(Lst msg) */
+				op_msg->set_data(data, op_msg->get_data_len());
+			}
 			{
 				int pathlen, cur;
 				char *path;
@@ -1461,7 +1465,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				char *tmp_msg = "File:";
 				char *msg_data;
 
-				if(NULL != data)
+				if(op_msg->get_data() != NULL)
 					comm_log("Special, but msg-piggy-backing not supproted");
 				else{
 
@@ -2432,7 +2436,6 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 				if(!op_msg->is_special()){
 					int pathlen, cur;
 					char *path;
-					op_msg->set_data(data, op_msg->get_data_len());
 
 					mkdir("./data", 0755);
 
@@ -2473,7 +2476,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						break;
 					}
 
-					if(op_msg->get_data_len() != fwrite(op_msg->get_data(), sizeof(uint8_t), \
+					if(op_msg->get_data_len() != fwrite(data, sizeof(uint8_t), \
 								op_msg->get_data_len(), fp_tmp)){
 						comm_log("fwrite error :%s", fname);
 						fclose(fp_tmp);
@@ -2482,15 +2485,18 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 							comm_log("Tried to delete, but attached");
 
 						err = SOCKET_ERR_FREAD;
+						free(data);
 						break;
 					}
 					else{
 						comm_log("fwrite succedded");
 						fclose(fp_tmp);
-						delete queue_data;
 						err = SOCKET_ERR_NONE;
-						break;
+						free(data);
 					}
+				}
+				else{
+					op_msg->set_data(data, op_msg->get_data_len());
 				}
 				{//It's last
 					int pathlen, cur;
@@ -2499,7 +2505,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					char *tmp_msg = "File:";
 					char *msg_data;
 
-					if(NULL != data)
+					if(NULL != op_msg->get_data())
 						comm_log("Special, but msg-piggy-backing not supported");
 					else{
 						// File path parsing //Should be done at client part
@@ -2594,9 +2600,11 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 		else{
 			comm_log("Failed handling this case");
 			err = SOCKET_ERR_FAIL;
-
-			break;
 		}
+
+		if(NULL == queue_data)
+			comm_log("??");
+		if(!queue_data->attached) delete queue_data;
 	}while(0);
 
 	if(SOCKET_ERR_NONE != err){
