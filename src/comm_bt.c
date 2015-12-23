@@ -45,17 +45,13 @@ int bt_dynamic_bind_rc(int sock)
 	return err;
 }
 
-sdp_session_t *bt_register_service(uint32_t *sint, int port)
+sdp_session_t *bt_register_service(uint8_t *sint, int port)
 {
 	const char *service_name = "OPEL Service";
 	const char *service_dsc = "OPEL Desc";
 	const char *service_prov = "OPEL Prov";
 	sdp_session_t *t_session = 0;
-	uint32_t service_uuid_int[4];
 	int i;
-
-	for(i=0; i<4; i++)
-		service_uuid_int[i] = sint[i];
 
 	uuid_t root_uuid, l2cap_uuid, rfcomm_uuid, svc_uuid;
 	sdp_list_t *l2cap_list = 0,
@@ -69,7 +65,7 @@ sdp_session_t *bt_register_service(uint32_t *sint, int port)
 
 	// set the general service ID
 
-	sdp_uuid128_create( &svc_uuid, &service_uuid_int );
+	sdp_uuid128_create( &svc_uuid, sint );
 	sdp_set_service_id( record, svc_uuid );
 
 	// make the service record publicly browsable
@@ -112,7 +108,7 @@ sdp_session_t *bt_register_service(uint32_t *sint, int port)
 }
 
 
-int bt_connect(uint32_t *tmp_uuid, int sock)
+int bt_connect(uint8_t *tmp_uuid, int sock)
 {
 	inquiry_info *ii = NULL;
 	int i, max_rsp, err;
@@ -125,11 +121,8 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 	struct sockaddr_rc addr = {0};
 	int status;
 	int num_rsp;
-	uint32_t uuid[4];
 	err = BT_S_OK;
 
-	for(i=0; i<4; i++)
-		uuid[i] = tmp_uuid[i];
 
 	inquiry_info *tmp_bt_scan_list;
 	dev_id = hci_get_route(NULL);
@@ -152,7 +145,7 @@ int bt_connect(uint32_t *tmp_uuid, int sock)
 		return -BT_E_FAIL;
 	}
 	
-	sdp_uuid128_create( &svc_uuid, &uuid);
+	sdp_uuid128_create( &svc_uuid, tmp_uuid);
 	search_list = sdp_list_append(NULL, &svc_uuid);
 
 	char bdad[256];

@@ -22,8 +22,8 @@ enum BTRESULT
 		, BT_E_INVALID_PARAM
 };
 int bt_dynamic_bind_rc(int sock);
-sdp_session_t *bt_register_service(uint32_t *service_uuid_int, int port);
-int bt_connect(uint32_t *uuid, int sock);
+sdp_session_t *bt_register_service(uint8_t *uint8_arr, int port);
+int bt_connect(uint8_t *uuid, int sock);
 #ifdef __cplusplus
 }
 #endif

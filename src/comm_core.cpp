@@ -514,9 +514,7 @@ int BT_Operations::dynamic_bind_rc(int sock)
 sdp_session_t* BT_Operations::register_service(char *intf_name, \
 		int port)
 {
-	uint32_t uuid[4];
-	name2uuid(intf_name, uuid);
-	return bt_register_service(uuid, port);
+	return bt_register_service(intf_name, port);
 }
 
 int BT_Operations::openBT(int sock, char *intf_name)
@@ -540,9 +538,9 @@ int BT_Operations::openBT(int sock, char *intf_name)
 }
 int BT_Operations::connectBT(char *intf_name, OUT int sock)
 {
-	uint32_t uuid[4];
-	name2uuid(intf_name, uuid);
-	return bt_connect(uuid, sock);
+	//uint32_t uuid[4];
+	//name2uuid(intf_name, uuid);
+	return bt_connect(intf_name, sock);
 }
 //
 
