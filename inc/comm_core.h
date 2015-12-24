@@ -177,6 +177,8 @@ class OPEL_MSG
 		void set_err(uint16_t err);
 		void set_data(uint8_t *data_p, uint32_t data_len);
 		void complete_header();
+
+		void *priv;
 };
 
 typedef void (*Comm_Handler)(OPEL_MSG *, int );
@@ -350,9 +352,9 @@ class OPEL_Server
 		
 		void SetServerHandler(IN Comm_Handler serv_handler);
 		int file_write(IN const char *filePath, IN OPEL_MSG *req_msg = NULL, \
-				IN Comm_Handler ack_file_handler = NULL, IN int cli_no=0);
+				IN Comm_Handler ack_file_handler = NULL, IN int cli_no=0, void *priv = NULL);
 		int msg_write(IN const char *buf, IN int len, IN OPEL_MSG *req_msg = NULL, \
-				IN Comm_Handler ack_msg_handler = NULL,	IN int cli_no = 0);
+				IN Comm_Handler ack_msg_handler = NULL,	IN int cli_no = 0, void *priv = NULL);
 
 };
 class OPEL_Client

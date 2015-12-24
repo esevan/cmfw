@@ -60,6 +60,14 @@ void onRead(OPEL_MSG *op_msg, int status)
 			printf("Got Msg:%s\n", (char *)op_msg->get_data());
 			cli->file_write(fname, op_msg, onAck);
 		}
+		else{
+			static unsigned int prev_off = 0, curr_off = 0;
+			prev_off = curr_off;
+			curr_off = op_msg->get_file_offset();
+
+			if(prev_off > curr_off)
+				printf("offset:%d\n", curr_off);
+		}
 	}
 	else{
 		printf("Read Failed(%d)\n", status);
@@ -74,6 +82,8 @@ void onAck(OPEL_MSG *op_msg, int status)
 			printf("Got data : %s\n", (char *)op_msg->get_data());
 			cli->msg_write("cmfw.tar.gz", strlen("cmfw.tar.gz")+1, NULL, onAck2);
 		}
+		else
+			printf("Offset : %d\n", op_msg->get_file_offset());
 
 	}
 	else

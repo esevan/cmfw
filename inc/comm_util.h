@@ -11,7 +11,7 @@
 #define OUT
 #endif
 
-#define NO_LOG
+//#define NO_LOG
 
 
 #ifndef NO_LOG

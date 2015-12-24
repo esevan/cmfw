@@ -41,7 +41,7 @@ TEST_ODIR=./test/obj
 
 test_bin=$(patsubst %,$(TEST_BIN)/%,$(_test))
 $(TEST_BIN)/%:$(TEST_DIR)/%.c
-	$(CC) -g src/comm_bt.c src/comm_core.cpp $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
+	$(CC) -g src/comm_bt.cc src/comm_core.cc $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
 
 _msg_test=msg_server msg_client
 msg_bin=$(patsubst %,$(TEST_BIN)/%,$(_msg_test))
@@ -49,6 +49,9 @@ msg_test:$(msg_bin)
 _file_test=file_server file_client
 file_bin=$(patsubst %,$(TEST_BIN)/%,$(_file_test))
 file_test:$(file_bin)
+_companion=companion_server
+companion_bin=$(patsubst %,$(TEST_BIN)/%,$(_companion));
+companion_test:$(companion_bin)
 
 test:msg_test file_test
 
