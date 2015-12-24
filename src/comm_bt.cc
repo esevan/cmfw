@@ -65,10 +65,10 @@ sdp_session_t *bt_register_service(uint8_t *sint, int port)
 	// set the general service ID
 
 	sdp_uuid128_create( &svc_uuid, sint );
-	for(i=0; i<16; i++){
-		printf("%c %x|", svc_uuid.value.uuid128.data[i], svc_uuid.value.uuid128.data[i]);
-	}
-	printf("\n");
+	//for(i=0; i<16; i++){
+	//	printf("%c %x|", svc_uuid.value.uuid128.data[i], svc_uuid.value.uuid128.data[i]);
+	//}
+	//printf("\n");
 
 	sdp_set_service_id( record, svc_uuid );
 
@@ -152,10 +152,10 @@ int bt_connect(uint8_t *tmp_uuid, int sock)
 	}
 	
 	sdp_uuid128_create( &svc_uuid, tmp_uuid);
-	for(i=0; i<16; i++){
-		printf("%c %x|", svc_uuid.value.uuid128.data[i], svc_uuid.value.uuid128.data[i]);
-	}
-	printf("\n");
+//	for(i=0; i<16; i++){
+//		printf("%c %x|", svc_uuid.value.uuid128.data[i], svc_uuid.value.uuid128.data[i]);
+//	}
+//	printf("\n");
 
 	search_list = sdp_list_append(NULL, &svc_uuid);
 
