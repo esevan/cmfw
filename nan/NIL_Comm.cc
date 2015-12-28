@@ -27,4 +27,4 @@ NAN_MODULE_INIT(InitAll) {
 			GetFunction(New<FunctionTemplate>(SendMsg)).ToLocalChecked());
 }
 
-NODE_MODULE(addon, InitAll)
+NODE_MODULE(NIL_Comm, InitAll)

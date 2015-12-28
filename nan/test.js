@@ -16,6 +16,7 @@ function mainCb(str, stat) {
 	}
 	else
 		comm.SendMsg("Correct Format = GET:[Sensor_Name]")
+
 }
 
 function myLoop (i){
@@ -24,4 +25,8 @@ function myLoop (i){
 			}, 3000)
 }
 
+
 comm.OpenChannel('Test Interface', mainCb)
+
+/* 아래 코드가 Touch 왔을 때 불리면 됩니다. */
+//comm.SendMsg("Touch!")

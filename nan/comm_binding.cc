@@ -35,7 +35,7 @@ void onAck(OPEL_MSG *op_msg, int status)
 
 	if(NULL != cb){
 		Local<Value> argv[] = {
-			v8::String::NewFromUtf8(v8::Isolate::GetCurrent(),(const char *)op_msg->get_data())
+			v8::String::New((const char *)op_msg->get_data())
 			, New<Number>(status)
 		};
 
@@ -47,7 +47,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 {
 	if(main_cb != NULL){
 		Local<Value> argv[] = {
-			v8::String::NewFromUtf8(v8::Isolate::GetCurrent(),(const char *)op_msg->get_data())
+			v8::String::New((const char *)op_msg->get_data())
 				, New<Number>(status)
 		};
 
@@ -107,3 +107,4 @@ NAN_METHOD(SendMsg) {
 		op_server->msg_write(msg_buff, len, op_msg, onAck, 0, (void *)cb);
 	}
 }
+

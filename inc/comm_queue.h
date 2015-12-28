@@ -1,7 +1,7 @@
 
 #ifndef __COMM_QUEUE_H__
 #define __COMM_QUEUE_H__
-
+#include <stddef.h>
 typedef struct _comm_queue_t {
 	struct _comm_queue_t *prev;
 	struct _comm_queue_t *next;
