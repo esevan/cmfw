@@ -65,8 +65,7 @@ void onRead(OPEL_MSG *op_msg, int status)
 			prev_off = curr_off;
 			curr_off = op_msg->get_file_offset();
 
-			if(prev_off > curr_off)
-				printf("offset:%d\n", curr_off);
+			printf("offset:%d\n", curr_off);
 		}
 	}
 	else{

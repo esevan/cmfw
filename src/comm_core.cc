@@ -1410,9 +1410,9 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				sprintf(fname, "./data/%s", &path[cur]);
 
 				if(op_msg->get_file_offset() == 0)
-					fp_tmp=fopen(fname, "w+");
+					fp_tmp=open(fname, "w+");
 				else
-					fp_tmp = fopen(fname, "a+");
+					fp_tmp = open(fname, "r+");
 
 				if(NULL == fp_tmp){
 					comm_log("%sm??File open error", &path[cur]);
@@ -1576,12 +1576,14 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			   }
 			 */
 
-			op_server->rqs->signal(op_msg->get_req_id(), queue_data);
 			comm_log("Ack Comes");
 
 			if(op_msg->is_file() && !op_msg->is_special()){
-				op_server->rqs->insert(queue_data);
+				op_server->rqs->signal(op_msg->get_req_id(), queue_data, 1);
 			}
+			else
+				op_server->rqs->signal(op_msg->get_req_id(), queue_data);
+			
 			queue_data->attached--;
 
 			if(queue_data->attached==0) delete queue_data;
@@ -1975,7 +1977,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			len = MAX_DAT_LEN;
 
 		if(len != 0){
-			fp_file = fopen(op_msg->get_file_name(), "rb");
+			fp_file = fopen(op_msg->get_file_name(), "r");
 			if(NULL == fp_file){
 				err = SOCKET_ERR_FOPEN;
 				queue_data->attached--;
@@ -2514,7 +2516,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 					if(op_msg->get_file_offset() == 0)
 						fp_tmp = fopen(fname, "w+");
 					else
-						fp_tmp = fopen(fname, "a+");
+						fp_tmp = fopen(fname, "r+");
 					if(NULL == fp_tmp){
 						comm_log("File open error");
 						queue_data->attached--;
@@ -2839,7 +2841,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 		return -COMM_E_INVALID_PARAM;
 	}
 
-	fp_file = fopen(filePath, "rb");
+	fp_file = fopen(filePath, "r");
 	if(NULL == fp_file){
 		comm_log("File Open error %s", filePath);
 		return -COMM_E_INVALID_PARAM;
@@ -2989,6 +2991,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 				readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
 				if( readCount < (int)len){
 					err = SOCKET_ERR_FREAD;
+					comm_log("Fread failed");
 					queue_data->attached--;
 					break;
 				}
