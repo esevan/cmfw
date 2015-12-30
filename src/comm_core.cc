@@ -1305,7 +1305,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		queue_data = new queue_data_t(op_socket);
 		if(NULL == queue_data){
 			comm_log("Memeory allocation failed");
-			exit(1);
+			//exit(1);
 		}
 		else
 			queue_data->attached++;
@@ -1517,7 +1517,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 					crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
 					if(op_msg->get_header()->chksum != crc16val){
 						comm_log("Chksum error %d, %d", op_msg->get_header()->chksum, crc16val);
-						exit(1);
+						//exit(1);
 					}
 
 				}
@@ -1561,7 +1561,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
 				if(op_msg->get_header()->chksum != crc16val){
 					comm_log("Chksum error %d, %d", op_msg->get_header()->chksum, crc16val);
-					exit(1);
+					//exit(1);
 				}
 
 			}
@@ -2633,7 +2633,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 						crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
 						if(op_msg->get_header()->chksum != crc16val){
 							comm_log("Chksum error %d, %d", op_msg->get_header()->chksum, crc16val);
-							exit(1);
+							//exit(1);
 						}
 
 					}
