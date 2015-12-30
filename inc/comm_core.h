@@ -33,8 +33,8 @@
 #endif
 
 #define MAX_NAME_LEN 16
-#define MAX_MSG_LEN 880
-#define MAX_DAT_LEN 880
+#define MAX_MSG_LEN 512
+#define MAX_DAT_LEN 512
 #define MAX_REQ_LEN 32
 #define MAX_CLIENTS 30		//bit operation check
 #define REQ_TIMEOUT 10
