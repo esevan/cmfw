@@ -61,4 +61,4 @@ test:msg_test file_test
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(TEST_BIN)/*
+	rm -f $(ODIR)/*.o *~ core $(TEST_BIN)/msg_server $(TEST_BIN)/msg_client $(TEST_BIN)/file_server $(TEST_BIN)/file_client

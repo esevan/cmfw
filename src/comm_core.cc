@@ -1405,12 +1405,12 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				}
 				cur++;
 
-				comm_log("File name: %s", op_msg->get_file_name());
+				comm_log("File name: %s(%d)\tParsed: %s", op_msg->get_file_name(), op_msg->get_file_offset(), &path[cur]);
 
 				sprintf(fname, "./data/%s", &path[cur]);
 
 				if(op_msg->get_file_offset() == 0)
-					fp_tmp=open(fname, "w+");
+					fp_tmp= open(fname, "w+");
 				else
 					fp_tmp = open(fname, "r+");
 
