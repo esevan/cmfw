@@ -2017,6 +2017,16 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 		if(len != 0){
 			uint8_t dat[MAX_DAT_LEN] = {0,};
 			//readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+
+			if(0 != fseek(fp_file, op_msg->get_file_offset(), SEEK_SET)){
+				comm_log("FSeek error ");
+				fclose(fp_file);
+				queue_data->attached--;
+				if(queue_data->attached == 0) delete queue_data;
+				err = SOCKET_ERR_FOPEN;
+				
+				goto WRITE_HANDLER_ERR;
+			}
 			readCount = fread(dat, 1, len, fp_file);
 			if( readCount < len ){
 				err = SOCKET_ERR_FREAD;
@@ -3025,6 +3035,18 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 			if(len != 0){
 				uint8_t dat[MAX_DAT_LEN] = {0,};
 				//readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+				if(0 != fseek(fp_file, op_msg->get_file_offset(), SEEK_SET)){
+					comm_log("FSEEk error ");
+					fclose(fp_file);
+					queue_data->attached--;
+					if(queue_data->attached==0) delete queue_data;
+					else
+						comm_log("tried to delete, but attached");
+
+					err = SOCKET_ERR_FOPEN;
+					break;
+				}
+
 				readCount = fread(dat, 1, len, fp_file);
 				if( readCount < (int)len){
 					err = SOCKET_ERR_FREAD;
