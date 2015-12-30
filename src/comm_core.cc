@@ -1410,9 +1410,9 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				sprintf(fname, "./data/%s", &path[cur]);
 
 				if(op_msg->get_file_offset() == 0)
-					fp_tmp= open(fname, "w+");
+					fp_tmp= fopen(fname, "w+");
 				else
-					fp_tmp = open(fname, "r+");
+					fp_tmp = fopen(fname, "r+");
 
 				if(NULL == fp_tmp){
 					comm_log("%sm??File open error", &path[cur]);
