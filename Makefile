@@ -41,7 +41,7 @@ TEST_ODIR=./test/obj
 
 test_bin=$(patsubst %,$(TEST_BIN)/%,$(_test))
 $(TEST_BIN)/%:$(TEST_DIR)/%.c
-	$(CC) -g src/comm_bt.cc src/comm_core.cc $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
+	$(CC) src/crc_ccit.cc src/comm_bt.cc src/comm_core.cc $< $(CFLAGS) -I$(IDIR) -o $@ $(LIBS)
 
 _msg_test=msg_server msg_client
 msg_bin=$(patsubst %,$(TEST_BIN)/%,$(_msg_test))

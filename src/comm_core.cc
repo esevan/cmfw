@@ -3,6 +3,7 @@
 #include <comm_util.h>
 #include <comm_core.h>
 #include <comm_bt.h>
+#include <crc_ccit.h>
 
 static uint32_t last_req_id;
 
@@ -11,6 +12,7 @@ OPEL_Header::OPEL_Header()
 {
 	req_id = 0;
 	data_len = 0;
+	chksum = 0;
 	initialized = FALSE;
 	type = PACKET_TYPE_MSG;
 }
@@ -24,15 +26,16 @@ int OPEL_Header::init_from_buff(uint8_t *buff)
 	data_len = btohl( *( (uint32_t *)(buff+4) ) );
 	type = btohs(*(uint16_t *)(buff+8));
 	err = btohs(*(uint16_t *)(buff+10));
+	chksum = btohs(*(uint16_t *)(buff+12));
 	if(PACKET_TYPE_FILE & type){
-		memcpy(data_info.finfo.fname, buff+12, 24);
-		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 36)) );
-		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+40) ) );
+		memcpy(data_info.finfo.fname, buff+14, 24);
+		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 38)) );
+		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+42) ) );
 		comm_log("name:%s", data_info.finfo.fname);
 	}
 	else if (PACKET_TYPE_MSG & type){
-		memcpy(data_info.minfo.dest_intf, buff+12, 16);
-		memcpy(data_info.minfo.src_intf, buff+28, 16);
+		memcpy(data_info.minfo.dest_intf, buff+14, 16);
+		memcpy(data_info.minfo.src_intf, buff+30, 16);
 	}
 
 	initialized = TRUE;
@@ -45,6 +48,7 @@ int OPEL_Header::init_to_buff(uint8_t *buff)
 	uint32_t b_dat_len = htobl(data_len);
 	uint16_t b_type = htobs(type);
 	uint16_t b_err = htobs(err);
+	uint16_t b_chksum = htobs(chksum);
 
 	if(NULL == buff){
 		comm_log("buff is null");
@@ -55,16 +59,17 @@ int OPEL_Header::init_to_buff(uint8_t *buff)
 	memcpy(buff+4,(uint8_t *)&b_dat_len, 4);
 	memcpy(buff+8, (uint8_t *)&b_type, 2);
 	memcpy(buff+10, (uint8_t *)&b_err, 2);
+	memcpy(buff+12, (uint8_t *)&chksum, 2);
 
 	if(PACKET_TYPE_FILE & type){
 		uint32_t b_offset = htobl(data_info.finfo.offset);
-		memcpy(buff+12, data_info.finfo.fname, 24);
-		memcpy(buff+36, (uint8_t *)&(data_info.finfo.fsize), 4);
-		memcpy(buff+40, (uint8_t *)&b_offset, 4);
+		memcpy(buff+14, data_info.finfo.fname, 24);
+		memcpy(buff+38, (uint8_t *)&(data_info.finfo.fsize), 4);
+		memcpy(buff+42, (uint8_t *)&b_offset, 4);
 	}
 	else if (PACKET_TYPE_MSG & type) {
-		memcpy(buff+12, data_info.minfo.dest_intf, 16);
-		memcpy(buff+28, data_info.minfo.src_intf, 16);
+		memcpy(buff+14, data_info.minfo.dest_intf, 16);
+		memcpy(buff+30, data_info.minfo.src_intf, 16);
 	}
 
 	return COMM_S_OK;
@@ -1281,6 +1286,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 		OPEL_Header *op_header = NULL;
 		queue_data_t *queue_data = NULL;
 		OPEL_MSG *op_msg = NULL;
+		uint16_t crc16val = 0;
 
 		op_socket = op_server->clients->get(i);
 		if(NULL == op_socket){
@@ -1508,6 +1514,12 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 
 					op_msg->set_data((uint8_t *)msg_data, strlen(msg_data) +1);
 					comm_log("%s(%d) received", msg_data, op_msg->get_file_offset());
+					crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
+					if(op_msg->get_header()->chksum != crc16val){
+						comm_log("Chksum error");
+						exit(1);
+					}
+
 				}
 			}
 		}
@@ -1545,10 +1557,18 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 				else
 					comm_log("msg : %s received", (char *)data);
 				op_msg->set_data(data, rCount);
+				
+				crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
+				if(op_msg->get_header()->chksum != crc16val){
+					comm_log("Chksum error");
+					exit(1);
+				}
+
 			}
 
 		}
 
+	
 		// Check the request ID for sync write
 
 		// Case 1, 2: server handler, ack handler
@@ -1743,6 +1763,7 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 	memcpy(data, buf, len);
 	op_msg->set_data(data, len);
 	comm_log("set_Ack %d", op_msg->is_ack());
+	op_msg->get_header()->chksum = crc16_ccitt((const void*)data, len);
 	/*if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
 		int iter_ra;
@@ -1992,11 +2013,11 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 		op_msg->set_data(NULL, len);
 
 		queue_data->buff = (uint8_t *)malloc( OPEL_HEADER_SIZE + len);
-		queue_data->buff_len = OPEL_HEADER_SIZE + len;
-		op_msg->get_header()->init_to_buff(queue_data->buff);
-
+	
 		if(len != 0){
-			readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+			uint8_t dat[MAX_DAT_LEN] = {0,};
+			//readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+			readCount = fread(dat, 1, len, fp_file);
 			if( readCount < len ){
 				err = SOCKET_ERR_FREAD;
 				queue_data->attached--;
@@ -2004,7 +2025,13 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 			}
 
 			fclose(fp_file);
+
+			op_msg->get_header()->chksum = crc16_ccitt((const void *)dat, len);
+			memcpy(queue_data->buff+OPEL_HEADER_SIZE, dat, len);
 		}
+
+		queue_data->buff_len = OPEL_HEADER_SIZE + len;
+		op_msg->get_header()->init_to_buff(queue_data->buff);
 	}
 	comm_log("Writing to socket ... %s", op_msg->is_msg()? (char *)op_msg->get_data():"This is File");
 	wval = op_socket->Write(queue_data->buff, queue_data->buff_len);
@@ -2372,6 +2399,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 	int err = SOCKET_ERR_NONE;
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
 	OPEL_Socket *serv_sock = op_client->serv_sock;
+	uint16_t crc16val = 0;
 	op_client->num_threads++;
 	comm_log("Read Thread generated %d", op_client->num_threads);
 	fd_set readfds = op_client->readfds;
@@ -2592,6 +2620,12 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 
 						op_msg->set_data((uint8_t *)msg_data, strlen(msg_data)+1);
 						comm_log("%s received", msg_data);
+						crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
+						if(op_msg->get_header()->chksum != crc16val){
+							comm_log("Chksum error");
+							exit(1);
+						}
+
 					}
 				}
 			}
@@ -2786,6 +2820,7 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 	}
 	memcpy(data, buf, len);
 	op_msg->set_data(data, len);
+	op_msg->get_header()->chksum = crc16_ccitt((const void *)data, len);
 
 	/*if(NULL != ack_msg_handler){
 		cvs->insert(op_msg->get_req_id(), ack_msg_handler);
@@ -2988,7 +3023,9 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 			op_msg->get_header()->init_to_buff(queue_data->buff);
 
 			if(len != 0){
-				readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+				uint8_t dat[MAX_DAT_LEN] = {0,};
+				//readCount = fread(queue_data->buff+OPEL_HEADER_SIZE, 1, len, fp_file);
+				readCount = fread(dat, 1, len, fp_file);
 				if( readCount < (int)len){
 					err = SOCKET_ERR_FREAD;
 					comm_log("Fread failed");
@@ -2996,6 +3033,9 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 					break;
 				}
 				fclose(fp_file);
+
+				op_msg->get_header()->chksum = crc16_ccitt((const void *)dat, len);
+				memcpy(queue_data->buff+OPEL_HEADER_SIZE, dat, len);
 			}
 		}
 

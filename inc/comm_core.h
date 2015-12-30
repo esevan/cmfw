@@ -107,6 +107,7 @@ class OPEL_Header
 		} data_info;
 		uint16_t type;
 		uint16_t err;
+		uint16_t chksum;
 		bool initialized;
 
 		OPEL_Header();
