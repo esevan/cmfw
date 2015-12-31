@@ -31,12 +31,12 @@ void onRead(OPEL_MSG *op_msg, int status)
 	}
 
 	printf("\tGot data:%s\n", (char *)op_msg->get_data());
-	/*
 	////////////////////////////////////////////////////////////////////
 	if(!strcmp("REQ from client", (char *)op_msg->get_data())){
 		char send_str[] = "ACK from server";
 		printf("\t\tsend:%s\n", send_str);
 		ser->msg_write(send_str, strlen(send_str)+1, op_msg, NULL);
+		ser->msg_write(send_str, strlen(send_str)+1);
 	}
 	////////////////////////////////////////////////////////////////////
 	else if(0 == test_cnt){
@@ -53,7 +53,6 @@ void onRead(OPEL_MSG *op_msg, int status)
 		test_cnt++;
 	}
 	////////////////////////////////////////////////////////////////////
-	*/
 }
 
 void onAck(OPEL_MSG *op_msg, int status)

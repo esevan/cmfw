@@ -662,19 +662,6 @@ int socket_set::length()
 {
 	return socket_set_len;
 }
-//
-
-///* OPEL_Comm_Connector Implementation */
-//void OPEL_Comm_Connector::run()
-//{
-//	int i, err, port;
-//	if(NULL == intf_name){
-//
-//	}
-//}
-//
-////
-
 /* req_set Implementation */
 req_set::req_set(OPEL_Comm_Queue *ackQueue)
 {
@@ -3208,37 +3195,6 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 		}
 	}
 
-
-
-	/*
-	do{
-
-		if(UV_ECANCELED == status)
-			break;
-
-		queue_data = op_client->ack_queue.dequeue();
-		if(NULL == queue_data){
-			comm_log("No queue_data");
-			break;
-		}
-
-		op_msg = queue_data->op_msg;
-
-		if(queue_data->handler){
-			comm_log("Calling handler");
-			queue_data->call_handler();
-		}
-		else{
-			comm_log("Calling default handler");
-			if(NULL != op_client->client_handler)
-				op_client->client_handler(op_msg, op_msg->get_err());
-		}
-
-		delete queue_data;
-	}while(0);
-
-	req->data = NULL;
-	*/
 	return;
 }
 
