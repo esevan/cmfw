@@ -776,6 +776,7 @@ int req_set::insert(queue_data_t *qdt)
 }
 
 /* cv_set Implementation */
+/*
 cv_set::cv_set()
 {
 	int i;
@@ -1060,6 +1061,7 @@ int cv_set::sch_to_sig(uint32_t reqid, OPEL_Comm_Queue *queue, queue_data_t *que
 
 	return res;
 }
+*/
 //
 
 /* OPEL_Server Implementation */
@@ -1576,13 +1578,6 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 			comm_log("No server handler exists, droped the data");
 		}
 		else {
-			/*
-			   int req_err = op_server->cvs->sch_to_sig(op_msg->get_req_id(), &op_server->ack_queue, queue_data);
-			   if(COMM_S_OK != op_server->cvs->insert(op_msg->get_req_id(), queue_data->handler)){
-			   comm_log("Here error");
-			   }
-			 */
-
 			comm_log("Ack Comes");
 
 			if(op_msg->is_file() && !op_msg->is_special()){
@@ -1644,29 +1639,6 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		queue_data_t *queue_data = NULL;
 		if(NULL == op_server->server_sock)
 			return;
-		/*
-		   if(op_server->cvs->getLen()>0){
-		   uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
-		   comm_log("cvs(%d)", op_server->cvs->getLen());
-		   }
-		 */
-/*
-		if(op_server->cvs->getLen() > 0){
-			int iter_ra;
-			for(iter_ra=0; iter_ra<MAX_REQ_LEN; iter_ra++){
-				if(op_server->ra_req[iter_ra].data == NULL){
-					op_server->ra_req[iter_ra].data = op_server;
-					break;
-				}
-			}
-			if(MAX_REQ_LEN == iter_ra)
-				comm_log("Plz I don't wanna see this");
-			else{
-				comm_log("ra inserted(%d)", iter_ra);
-				uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
-			}
-		}
-		*/
 		if(op_server->read_queue.isEmptyQueue()){
 			uv_queue_work(uv_default_loop(), &op_server->read_req, generic_read_handler, after_read_handler);
 			break;
