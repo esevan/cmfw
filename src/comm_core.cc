@@ -1117,6 +1117,10 @@ OPEL_Server::OPEL_Server(const char *intf_name)
 		*/
 	ra_req.data = (void *)this;
 
+	write_thread_alive = false;
+	read_thread_alive = false;
+	ra_thread_alive = false;
+
 	uv_queue_work(uv_default_loop(), &read_req,\
 			generic_read_handler, after_read_handler);
 	uv_queue_work(uv_default_loop(), &ra_req,\
@@ -1177,6 +1181,10 @@ OPEL_Server::OPEL_Server(const char *intf_name, Comm_Handler serv_handler)
 		*/
 	ra_req.data = (void *)this;
 
+	write_thread_alive = false;
+	read_thread_alive = false;
+	ra_thread_alive = false;
+
 	uv_queue_work(uv_default_loop(), &read_req,\
 			generic_read_handler, after_read_handler);
 	uv_queue_work(uv_default_loop(), &ra_req,\
@@ -1212,6 +1220,7 @@ void OPEL_Server::generic_read_handler(uv_work_t *req)
 	int err_cli_pos = -1;
 	static int first_listen = 0;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
+	op_server->read_thread_alive = true;
 	op_server->num_threads++;
 	comm_log("Read handler up %d", op_server->num_threads);
 	if(!first_listen && 0 == op_server->clients->length()){
@@ -1631,6 +1640,7 @@ READ_CLIENT_SOCKET_CLOSE:
 void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 {
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
+	op_server->read_thread_alive = false;
 	op_server->num_threads--;
 	comm_log("read handler down %d", op_server->num_threads);
 	if(UV_ECANCELED == status)
@@ -1639,7 +1649,7 @@ void OPEL_Server::after_read_handler(uv_work_t *req, int status)
 		queue_data_t *queue_data = NULL;
 		if(NULL == op_server->server_sock)
 			return;
-		if(op_server->read_queue.isEmptyQueue()){
+		if(op_server->read_queue.isEmptyQueue() && !op_server->read_thread_alive){
 			uv_queue_work(uv_default_loop(), &op_server->read_req, generic_read_handler, after_read_handler);
 			break;
 		}
@@ -1763,7 +1773,7 @@ int OPEL_Server::msg_write(IN const char *buf, IN int len,\
 
 	write_queue.enqueue(queue_data);
 
-	if(empty){
+	if(empty && !write_thread_alive){
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 	}
 
@@ -1908,7 +1918,7 @@ int OPEL_Server::file_write(IN const char *filePath, \
 	empty = write_queue.isEmptyQueue();
 	write_queue.enqueue(queue_data);
 
-	if(empty)
+	if(empty && !write_thread_alive)
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 
 
@@ -1925,6 +1935,7 @@ void OPEL_Server::generic_write_handler(uv_work_t *req)
 	OPEL_Socket *op_socket;
 	int len;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
+	op_server->write_thread_alive = true;
 //	cv_set *cvs = op_server->cvs;
 	op_server->num_threads++;
 	comm_log("write thread up %d", op_server->num_threads);
@@ -2062,6 +2073,7 @@ WRITE_HANDLER_ERR:
 void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 {
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
+	op_server->write_thread_alive = false;
 	//cv_set *cvs = op_server->cvs;
 	op_server->num_threads--;
 	comm_log("write thread down %d", op_server->num_threads);
@@ -2082,7 +2094,7 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 			uv_queue_work(uv_default_loop(), &op_server->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 	*/
-	if(!op_server->write_queue.isEmptyQueue()){
+	if(!op_server->write_queue.isEmptyQueue() && !op_server->write_thread_alive){
 		uv_queue_work(uv_default_loop(), &op_server->write_req, generic_write_handler, after_write_handler);
 	}
 
@@ -2092,6 +2104,7 @@ void OPEL_Server::after_write_handler(uv_work_t *req, int status)
 void OPEL_Server::generic_ra_handler(uv_work_t *req)
 {
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
+	op_server->ra_thread_alive = true;
 	int res;
 	op_server->num_threads++;
 	comm_log("ra thread up %d", op_server->num_threads);
@@ -2108,6 +2121,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	queue_data_t *queue_data;
 	OPEL_MSG *op_msg;
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
+	op_server->ra_thread_alive = false;
 	Comm_Handler server_handler = op_server->server_handler;
 	op_server->num_threads--;
   	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
@@ -2118,7 +2132,8 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	while(TRUE){
 		queue_data = op_server->ack_queue.dequeue();
 		if(NULL == queue_data){
-			uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
+			if(!op_server->ra_thread_alive)
+				uv_queue_work(uv_default_loop(), &op_server->ra_req, generic_ra_handler, after_ra_handler);
 			break;
 		}
 		else{
@@ -2223,6 +2238,10 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler onConnect)
 		*/
 	ra_req.data = (void *)this;
 
+	write_thread_alive = false;
+	read_thread_alive = false;
+	ra_thread_alive = false;
+
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
 }
@@ -2272,6 +2291,12 @@ OPEL_Client::OPEL_Client(const char *intf_name, Comm_Handler client_handler,Comm
 		*/
 	ra_req.data = (void *)this;
 
+	write_thread_alive = false;
+	read_thread_alive = false;
+	ra_thread_alive = false;
+
+	connection = CLI_DISCONNECTED;
+
 	uv_queue_work(uv_default_loop(), &connect_req,\
 			generic_connect_handler, after_connect_handler);
 }
@@ -2298,6 +2323,7 @@ OPEL_Client::~OPEL_Client()
 void OPEL_Client::generic_connect_handler(uv_work_t *req)
 {
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->connection = CLI_CONNECTING;
 	BT_Operations *bt_ops = op_client->bt_ops;
 	comm_log("Connect thread Up %d", ++op_client->num_threads);
 	char *intf_name = op_client->intf_name;
@@ -2314,6 +2340,7 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 
 
 	if(COMM_S_OK == err){
+		op_client->connection = CLI_CONNECTED;
 		struct sockaddr_rc rem_addr = {0};
 		socklen_t opt = sizeof(rem_addr);
 		char buf[BUFF_SIZE];
@@ -2327,15 +2354,18 @@ void OPEL_Client::after_connect_handler(uv_work_t *req, int status)
 		op_client->serv_sock->get();
 		op_client->connected = TRUE;
 
-		uv_queue_work(uv_default_loop(), &op_client->read_req,\
-				generic_read_handler, \
-				after_read_handler);
-		uv_queue_work(uv_default_loop(), &op_client->ra_req,\
-				generic_ra_handler,\
-				after_ra_handler);
+		if(!op_client->read_thread_alive)
+			uv_queue_work(uv_default_loop(), &op_client->read_req,\
+					generic_read_handler, \
+					after_read_handler);
+		if(!op_client->ra_thread_alive)
+			uv_queue_work(uv_default_loop(), &op_client->ra_req,\
+					generic_ra_handler,\
+					after_ra_handler);
 	}
 	else{
 		comm_log("Connect failed : %d", err);
+		op_client->connection = CLI_DISCONNECTED;
 	}
 
 	if(NULL != op_client->onConnect){
@@ -2346,6 +2376,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 {
 	int err = SOCKET_ERR_NONE;
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->read_thread_alive = true;
 	OPEL_Socket *serv_sock = op_client->serv_sock;
 	uint16_t crc16val = 0;
 	op_client->num_threads++;
@@ -2683,6 +2714,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 {
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->read_thread_alive = false;
 	OPEL_Socket *serv_sock = op_client->serv_sock;
 	op_client->num_threads--;
 	comm_log("Read thread down:%d", op_client->num_threads);
@@ -2693,7 +2725,7 @@ void OPEL_Client::after_read_handler(uv_work_t *req, int status)
 		queue_data_t *queue_data = NULL;
 		if(NULL == serv_sock)
 			return;
-		if(op_client->read_queue.isEmptyQueue()){
+		if(op_client->read_queue.isEmptyQueue() && !op_client->read_thread_alive){
 			uv_queue_work(uv_default_loop(), &op_client->read_req, generic_read_handler, after_read_handler);
 			break;
 		}
@@ -2802,7 +2834,7 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 	empty = write_queue.isEmptyQueue();
 
 	write_queue.enqueue(queue_data);
-	if(empty){
+	if(empty && !write_thread_alive){
 		comm_log("Write thread gogo");
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 	}
@@ -2896,7 +2928,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 	empty = write_queue.isEmptyQueue();
 	write_queue.enqueue(queue_data);
 
-	if(empty)
+	if(empty && !write_thread_alive)
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 
 	return COMM_S_OK;
@@ -2905,6 +2937,7 @@ int OPEL_Client::file_write(IN const char *filePath, \
 void OPEL_Client::generic_write_handler(uv_work_t *req)
 {
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->write_thread_alive =true;
 	int err = SOCKET_ERR_NONE;
 	queue_data_t *queue_data;
 	OPEL_MSG *op_msg;
@@ -3055,6 +3088,7 @@ void OPEL_Client::generic_write_handler(uv_work_t *req)
 void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 {
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->write_thread_alive = false;
 	op_client->num_threads--;
 	comm_log("write thread down %d", op_client->num_threads);
 	if(UV_ECANCELED == status)
@@ -3074,7 +3108,7 @@ void OPEL_Client::after_write_handler(uv_work_t *req, int status)
 			uv_queue_work(uv_default_loop(), &op_client->ra_req[iter_ra], generic_ra_handler, after_ra_handler);
 	}
 	*/
-	if(op_client->write_queue.isEmptyQueue() == FALSE)
+	if(op_client->write_queue.isEmptyQueue() == FALSE && !op_client->write_thread_alive)
 		uv_queue_work(uv_default_loop(), &op_client->write_req, generic_write_handler, after_write_handler);
 }
 
@@ -3082,6 +3116,7 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 {
 	int i, res = -1;
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->ra_thread_alive = true;
 	//cv_set *cvs = op_client->cvs;
 	op_client->num_threads++;
 	comm_log("ra thread up %d", op_client->num_threads);
@@ -3107,6 +3142,7 @@ void OPEL_Client::generic_ra_handler(uv_work_t *req)
 void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 {
 	OPEL_Client *op_client = (OPEL_Client *)req->data;
+	op_client->ra_thread_alive = false;
 	queue_data_t *queue_data;
 	OPEL_MSG *op_msg;
 
@@ -3120,7 +3156,7 @@ void OPEL_Client::after_ra_handler(uv_work_t *req, int status)
 
 	while(TRUE){
 		queue_data = op_client->ack_queue.dequeue();
-		if(NULL == queue_data){
+		if(NULL == queue_data && !op_client->ra_thread_alive){
 			uv_queue_work(uv_default_loop(), &op_client->ra_req, generic_ra_handler, after_ra_handler);
 			break;
 		}

@@ -78,6 +78,12 @@ enum{
 	SOCKET_ERR_TOUT
 };
 
+enum{
+	CLI_DISCONNECTED = 0,
+	CLI_CONNECTING,
+	CLI_CONNECTED
+};
+
 typedef char opel_bd_name[248];
 
 typedef struct _req_t {
@@ -327,6 +333,9 @@ class OPEL_Server
 		OPEL_Comm_Queue ack_queue;
 
 		int closing;	//What is this for?
+		bool write_thread_alive;
+		bool read_thread_alive;
+		bool ra_thread_alive;
 		uv_work_t write_req;
 		uv_work_t read_req;
 		//uv_work_t ra_req[MAX_REQ_LEN];
@@ -380,6 +389,11 @@ class OPEL_Client
 		OPEL_Comm_Queue ack_queue;
 
 		int closing;	//What is this for?
+		int connection;
+		bool write_thread_alive;
+		bool read_thread_alive;
+		bool ra_thread_alive;
+
 		uv_work_t connect_req;
 		uv_work_t write_req;
 		uv_work_t read_req;
