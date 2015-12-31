@@ -2094,34 +2094,13 @@ void OPEL_Server::generic_ra_handler(uv_work_t *req)
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
 	int res;
 	op_server->num_threads++;
-	//comm_log("ra thread up %d", op_server->num_threads);
+	comm_log("ra thread up %d", op_server->num_threads);
 
 	while(TRUE){
 		res = op_server->rqs->wait(MAX_MSG_TIMEOUT);
 		if(res >= 0) //Timed Out data (already in ack queue) or someone inserted ack
 			break;
 	}
-	/*
-	   int i, res = -1;
-	   OPEL_Server *op_server = (OPEL_Server *)req->data;
-	   cv_set *cvs = op_server->cvs;
-	   op_server->num_threads++;
-
-	   comm_log("ra thread up %d", op_server->num_threads);
-
-	   for(i=0; i<MAX_REQ_LEN; i++){
-	   res = cvs->wait(i, MAX_MSG_TIMEOUT);
-	   if(res >= 0)
-	   break;
-	   }
-
-	//If full wait
-	if(res == 1){
-//Nothing to do
-}
-
-return;
-	 */
 }
 
 void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
@@ -2131,7 +2110,7 @@ void OPEL_Server::after_ra_handler(uv_work_t *req, int status)
 	OPEL_Server *op_server = (OPEL_Server *)req->data;
 	Comm_Handler server_handler = op_server->server_handler;
 	op_server->num_threads--;
-  	//comm_log("ra thread down(%d),%d", status,op_server->num_threads);
+  	comm_log("ra thread down(%d),%d", status,op_server->num_threads);
 	if(UV_ECANCELED == status){
 		comm_log("Canceled");
 		return;
