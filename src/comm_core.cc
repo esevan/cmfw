@@ -2803,6 +2803,7 @@ int OPEL_Client::msg_write(IN const char *buf, IN int len,\
 
 	write_queue.enqueue(queue_data);
 	if(empty){
+		comm_log("Write thread gogo");
 		uv_queue_work(uv_default_loop(), &write_req, generic_write_handler, after_write_handler);
 	}
 	return COMM_S_OK;
