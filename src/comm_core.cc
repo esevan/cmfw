@@ -2599,7 +2599,7 @@ void OPEL_Client::generic_read_handler(uv_work_t *req)
 
 						op_msg->set_data((uint8_t *)msg_data, strlen(msg_data)+1);
 						comm_log("%s received", msg_data);
-						crc16val = crc16_ccitt((const void *)op_msg->get_data(), op_msg->get_data_len());
+						crc16val = crc16_ccitt((const void *)data, op_msg->get_data_len());
 						if(op_msg->get_header()->chksum != crc16val){
 							comm_log("Chksum error %d, %d", op_msg->get_header()->chksum, crc16val);
 							//exit(1);
