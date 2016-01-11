@@ -31,7 +31,7 @@ int OPEL_Header::init_from_buff(uint8_t *buff)
 		memcpy(data_info.finfo.fname, buff+14, 24);
 		data_info.finfo.fsize = btohl( *( (uint32_t *) (buff + 38)) );
 		data_info.finfo.offset = btohl( *( (uint32_t *) (buff+42) ) );
-		comm_log("name:%s", data_info.finfo.fname);
+		memcpy(destFname, buff+46, 70);
 	}
 	else if (PACKET_TYPE_MSG & type){
 		memcpy(data_info.minfo.dest_intf, buff+14, 16);
@@ -63,9 +63,10 @@ int OPEL_Header::init_to_buff(uint8_t *buff)
 
 	if(PACKET_TYPE_FILE & type){
 		uint32_t b_offset = htobl(data_info.finfo.offset);
-		memcpy(buff+14, data_info.finfo.fname, 24);
+		memcpy(buff+14, (uint8_t *)data_info.finfo.fname, 24);
 		memcpy(buff+38, (uint8_t *)&(data_info.finfo.fsize), 4);
 		memcpy(buff+42, (uint8_t *)&b_offset, 4);
+		memcpy(buff+46, (uint8_t *)destFname, 24);
 	}
 	else if (PACKET_TYPE_MSG & type) {
 		memcpy(buff+14, data_info.minfo.dest_intf, 16);
@@ -237,6 +238,16 @@ void OPEL_MSG::complete_header()
 OPEL_Socket *OPEL_MSG::get_op_sock()
 {
 	return op_sock;
+}
+char *OPEL_MSG::get_dfile_name()
+{
+	if(!op_header->isInitialized())
+		return NULL;
+	return op_header->destFname;
+}
+void OPEL_MSG::set_dfile_name(char *src)
+{
+	memcpy(op_header->destFname, src, 24);
 }
 //
 

@@ -114,6 +114,7 @@ class OPEL_Header
 		uint16_t type;
 		uint16_t err;
 		uint16_t chksum;
+		char destFname[24];
 		bool initialized;
 
 		OPEL_Header();
@@ -170,6 +171,7 @@ class OPEL_MSG
 		bool is_special();
 
 		char *get_file_name();
+		char *get_dfile_name();
 		uint32_t get_file_offset();
 		uint32_t get_file_size();
 		uint16_t get_err();
@@ -183,6 +185,7 @@ class OPEL_MSG
 		void set_special();
 		void set_err(uint16_t err);
 		void set_data(uint8_t *data_p, uint32_t data_len);
+		void set_dfile_name(char *src);
 		void complete_header();
 
 		void *priv;
