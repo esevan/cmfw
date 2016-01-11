@@ -43,8 +43,10 @@ unsigned short crc16_ccitt(const void *buf, int len)
 {
 	register int counter;
 	register unsigned short crc = 0;
-	for( counter = 0; counter < len; counter++)
-		crc = (crc<<8) ^ crc16tab[((crc>>8) ^ *(char *)buf++)&0x00FF];
+	for( counter = 0; counter < len; counter++){
+		buf = buf+1;
+		crc = (crc<<8) ^ crc16tab[((crc>>8) ^ *(char *)buf)&0x00FF];
+	}
 	return crc;
 }
 #ifdef __cplusplus
