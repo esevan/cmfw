@@ -21,6 +21,8 @@ class OpelServerSocket
 
 		/* Return accepted socket (Dynamically Allocated, must be freed later)  */
 		OpelSocket* Accept(int *err);
+		void set(char *intf_name, uint8_t conn_type);
+		int getFd();
 		bool init();
 		void Close();
 };

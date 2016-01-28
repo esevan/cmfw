@@ -98,3 +98,14 @@ OpelSocket* OpelServerSocket::Accept(int *err)
 	*err = res;
 	return op_sock;
 }
+
+int OpelServerSocket::getFd()
+{
+	return sock_fd;
+}
+
+void OpelServerSocket::set(char *intf_name, uint8_t conn_type)
+{	
+	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
+	this->conn_type = conn_type;
+}

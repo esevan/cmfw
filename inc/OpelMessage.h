@@ -3,7 +3,7 @@
 	
 #define PACKET_TYPE_MSG		1
 #define PACKET_TYPE_FILE	2
-#define PACKET_TYPE_ACK		4
+//#define PACKET_TYPE_ACK		4
 #define PACKET_TYPE_SPE		8
 
 #define FNAME_LEN 24
@@ -40,7 +40,7 @@ class OpelMessage
 {
 	private:
 		OpelHeader op_header;
-		OpelSocket op_socket;
+		OpelSocket* op_socket;
 		
 		uint8_t* data;
 
@@ -63,7 +63,7 @@ class OpelMessage
 		uint32_t getFSize();
 		uint32_t getOffset();
 		uint8_t *getData();
-		OpelSocket& getSocket();
+		OpelSocket *getSocket();
 
 		void setReqid(uint32_t arg);
 		void setDataLen(uint32_t len);
@@ -76,7 +76,7 @@ class OpelMessage
 		void setFSize(uint32_t size);
 		void setOffset(uint32_t offset);
 		void setData(uint8_t data[], uint32_t len);
-		void setSocket(OpelSocket &op_sock);
+		void setSocket(OpelSocket *op_sock);
 		void setHeader(OpelHeader &op_head);
 };
 #endif

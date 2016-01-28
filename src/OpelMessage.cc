@@ -61,6 +61,8 @@ bool OpelHeader::initFromBuff(uint8_t buff[]){
 		offset = ntohl(tmp_int);
 	}
 
+	initialized = true;
+
 	return true;
 }
 
@@ -216,7 +218,7 @@ uint8_t *OpelMessage::getData()
 	}
 	return data;
 }
-OpelSocket& OpelMessage::getSocket()
+OpelSocket* OpelMessage::getSocket()
 {
 	if(false == op_header.initialized){
 		comm_log("Not initialized, but %s invoked", __func__);
@@ -235,6 +237,7 @@ void OpelMessage::setDataLen(uint32_t len)
 void OpelMessage::setType(uint16_t type)
 {
 	op_header.type = type;
+	op_header.initialized = true;
 }
 void OpelMessage::setErr(uint16_t err)
 {
@@ -263,16 +266,17 @@ void OpelMessage::setOffset(uint32_t offset)
 }
 void OpelMessage::setData(uint8_t data[], uint32_t len)
 {
-	if(NULL != data){
-		free(data);
-		data = NULL;
+	if(NULL != this->data){
+		free(this->data);
+		this->data = NULL;
 	}
-	memcpy(this->data, data, len);
+	if(NULL != data)
+		memcpy(this->data, data, len);
 	op_header.initialized = true;
 }
-void OpelMessage::setSocket(OpelSocket &op_sock)
+void OpelMessage::setSocket(OpelSocket *op_sock)
 {
-	op_socket = op_sock;
+	this->op_socket = op_sock;
 }
 void OpelMessage::setHeader(OpelHeader &op_head)
 {

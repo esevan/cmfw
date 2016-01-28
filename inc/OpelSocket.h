@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <uv.h>
 
 class OpelSocket
 {
@@ -27,6 +26,7 @@ class OpelSocket
 		int sock_fd;
 		uint16_t sock_id;
 		uint16_t stat;
+		uint16_t ref_cnt;
 
 	public:
 		OpelSocket();
@@ -42,13 +42,15 @@ class OpelSocket
 		//bool isConnected();
 
 		int getFd();
-		int getId();
+		uint16_t getRefCnt();
+		void get();
 		uint32_t getPayloadSize();
 		uint16_t getStat();
 		char *getPrivate();
 		
 		void setFd(int fd);
 		void setId(uint16_t id);
+		void put();
 };
 
 

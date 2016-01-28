@@ -10,13 +10,19 @@ OpelSocket::OpelSocket()
 	intf_name[0] = '\0';
 	sock_fd = 0;
 	stat = 0;
+	ref_cnt = 0;
 }
 OpelSocket::OpelSocket(char *intf_name, uint8_t conn_type)
 {
 	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
 	this->conn_type = conn_type;
 	sock_fd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+
+	sock_fd = 0;
+	stat = 0;
+	ref_cnt = 0;
 }
+
 
 OpelSocket& OpelSocket::operator=(OpelSocket& arg)
 {
@@ -24,6 +30,7 @@ OpelSocket& OpelSocket::operator=(OpelSocket& arg)
 	strncpy(this->intf_name, arg.intf_name, MAX_INTF_LEN);
 	this->sock_fd = arg.sock_fd;
 	this->stat = arg.stat;
+	this->ref_cnt = arg.ref_cnt;
 
 	return *this;
 }
@@ -61,8 +68,10 @@ uint16_t OpelSocket::Connect()
 			res = bt_connect((uint8_t *)intf_name, sock_fd);
 			if(res < 0)
 				res = COMM_E_FAIL;
-			else
+			else{
+				comm_log("Connected");
 				res = COMM_S_OK;
+			}
 			break;
 		case CONN_TYPE_WD:
 		case CONN_TYPE_WF:
@@ -80,6 +89,14 @@ int OpelSocket::getFd()
 	if(sock_fd < 0)
 		return -1;
 	return sock_fd;
+}
+uint16_t OpelSocket::getRefCnt()
+{
+	return ref_cnt;
+}
+void OpelSocket::get()
+{
+	ref_cnt++;
 }
 uint32_t OpelSocket::getPayloadSize()
 {
@@ -125,4 +142,8 @@ void OpelSocket::setId(uint16_t id)
 void OpelSocket::setFd(int fd)
 {
 	sock_fd = fd;
+}
+void OpelSocket::put()
+{
+	ref_cnt--;
 }
