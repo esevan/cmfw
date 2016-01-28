@@ -15,11 +15,13 @@ class OpelClientMonitor
 		OpelReadQueue *rqueue;
 
 	public:
-		OpelClientMonitor(char *intf_name, uint8_t conn_type, OpelReadQueue *rq);
+		OpelClientMonitor(char *intf_name, uint8_t conn_type, OpelReadQueue *rq, bool *connected, OpelCommHandler statCb);
 		~OpelClientMonitor();
 		OpelSocket *getSocket();
 		bool Select();
 		bool Connect();
+		bool *connected;
+		OpelCommHandler statCb;
 };
 
 class OpelClient : public OpelSCModel

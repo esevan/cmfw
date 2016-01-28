@@ -48,8 +48,6 @@ class OpelSCModel
 {
 	private:
 		char intf_name[MAX_INTF_LEN];
-		OpelCommHandler defCb;
-		OpelCommHandler statCb;
 	
 		void *priv;
 
@@ -57,6 +55,8 @@ class OpelSCModel
 		OpelReadQueue rqueue;
 		OpelCommQueue mqueue;
 		OpelCommQueue fqueue;
+		OpelCommHandler defCb;
+		OpelCommHandler statCb;
 
 	public:
 		OpelSCModel(char *intf_name, OpelCommHandler defCb, OpelCommHandler statCb);

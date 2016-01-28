@@ -23,6 +23,8 @@ class OpelSocketList
 		void Insert(OpelSocket *sock);
 		bool Select();
 		OpelSocket *getSocketById(uint16_t sock_id);
+		OpelCommHandler statCb;
+		bool accepted;
 };
 
 class OpelServer : public OpelSCModel

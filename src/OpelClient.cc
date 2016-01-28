@@ -7,10 +7,12 @@
 static void generic_connect_handler(uv_work_t *req);
 static void after_connect_handler(uv_work_t *req, int status);
 
-OpelClientMonitor::OpelClientMonitor(char *intf_name, uint8_t conn_type, OpelReadQueue *rq)
+OpelClientMonitor::OpelClientMonitor(char *intf_name, uint8_t conn_type, OpelReadQueue *rq, bool *connected, OpelCommHandler statCb)
 {
 	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
 	this->conn_type = conn_type;
+	this->connected = connected;
+	this->statCb = statCb;
 	rqueue = rq;
 	op_sock = new OpelSocket(intf_name, CONN_TYPE_BT);
 	if(NULL == op_sock || op_sock->getFd() < 0){
@@ -58,7 +60,7 @@ OpelSocket *OpelClientMonitor::getSocket()
 OpelClient::OpelClient(char *intf_name, OpelCommHandler defCb, OpelCommHandler statCb)
 	:OpelSCModel(intf_name, defCb, statCb)
 {
-	ocm = new OpelClientMonitor(intf_name, CONN_TYPE_BT, &rqueue);
+	ocm = new OpelClientMonitor(intf_name, CONN_TYPE_BT, &rqueue, &connected, statCb);
 	uv_work_t *req = (uv_work_t *)malloc(sizeof(uv_work_t));
 	priv = (void *)req;
 
@@ -84,7 +86,6 @@ bool OpelClient::Start()
 			comm_log("SCModel started, so skip this");
 		}
 		uv_queue_work(uv_default_loop(), (uv_work_t *)priv, generic_connect_handler, after_connect_handler);
-		connected = true;
 	}
 	else{
 		comm_log("Already connected");
@@ -107,7 +108,10 @@ static void generic_connect_handler(uv_work_t *req)
 {
 	OpelClientMonitor *ocm = (OpelClientMonitor *)req->data;
 
-	ocm->Connect();
+	if(*(ocm->connected) == false){
+		*(ocm->connected) = ocm->Connect();
+		return;
+	}
 	
 	while(ocm->Select()){}
 
@@ -116,6 +120,19 @@ static void generic_connect_handler(uv_work_t *req)
 
 static void after_connect_handler(uv_work_t *req, int status)
 {
+	OpelClientMonitor *ocm = (OpelClientMonitor *)req->data;
+
+	if(status == UV_ECANCELED)
+		return;
+	if(*(ocm->connected) == true){
+		OpelMessage op_msg;
+
+		ocm->statCb(&op_msg, STAT_CONNECTED);
+		uv_queue_work(uv_default_loop(), req, generic_connect_handler, after_connect_handler);
+	}
+	else{
+		ocm->statCb(NULL, STAT_DISCON);
+	}
 	comm_log("Connect handler terminated");
 	return;
 }
