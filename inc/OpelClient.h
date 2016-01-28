@@ -17,6 +17,7 @@ class OpelClientMonitor
 	public:
 		OpelClientMonitor(char *intf_name, uint8_t conn_type, OpelReadQueue *rq);
 		~OpelClientMonitor();
+		OpelSocket *getSocket();
 		bool Select();
 		bool Connect();
 };

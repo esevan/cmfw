@@ -49,6 +49,10 @@ bool OpelClientMonitor::Connect()
 
 	return (op_sock->Connect() == COMM_S_OK);
 }
+OpelSocket *OpelClientMonitor::getSocket()
+{
+	return op_sock;
+}
 
 //////////////////////////OpelClient Impelmentation
 OpelClient::OpelClient(char *intf_name, OpelCommHandler defCb, OpelCommHandler statCb)
@@ -114,4 +118,39 @@ static void after_connect_handler(uv_work_t *req, int status)
 {
 	comm_log("Connect handler terminated");
 	return;
+}
+
+bool OpelClient::SendMsg(char *str)
+{
+	if(NULL == str){
+		comm_log("Str == NULL");
+		return false;
+	}
+
+	OpelMessage op_msg;
+	OpelSocket *op_sock = ocm->getSocket();
+
+	op_msg.setSocket(op_sock);
+	op_msg.setData((uint8_t *)str, strlen(str)+1);
+	op_msg.setType(PACKET_TYPE_MSG);
+
+	return OpelSCModel::Send(&op_msg);
+}
+
+bool OpelClient::SendFile(char *srcFName, char *destFName)
+{
+	if(NULL == srcFName || NULL == destFName){
+		comm_log("Invalid file name");
+		return false;
+	}
+
+	OpelMessage op_msg;
+	OpelSocket *op_sock = ocm->getSocket();
+
+	op_msg.setSocket(op_sock);
+	op_msg.setSrcFName(srcFName);
+	op_msg.setDestFName(destFName);
+	op_msg.setType(PACKET_TYPE_FILE);
+
+	return OpelSCModel::Send(&op_msg);
 }
