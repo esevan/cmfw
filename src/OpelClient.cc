@@ -106,6 +106,7 @@ bool OpelClient::Stop()
 
 static void generic_connect_handler(uv_work_t *req)
 {
+	comm_log("Connect handler UP");
 	OpelClientMonitor *ocm = (OpelClientMonitor *)req->data;
 
 	if(*(ocm->connected) == false){
@@ -120,6 +121,7 @@ static void generic_connect_handler(uv_work_t *req)
 
 static void after_connect_handler(uv_work_t *req, int status)
 {
+	comm_log("Connect handler terminated");
 	OpelClientMonitor *ocm = (OpelClientMonitor *)req->data;
 
 	if(status == UV_ECANCELED)
@@ -133,7 +135,6 @@ static void after_connect_handler(uv_work_t *req, int status)
 	else{
 		ocm->statCb(NULL, STAT_DISCON);
 	}
-	comm_log("Connect handler terminated");
 	return;
 }
 

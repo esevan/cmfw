@@ -153,6 +153,7 @@ OpelSocket *OpelReadQueue::dequeue()
 	OpelSocket *op_sock = NULL;
 	uv_mutex_lock(&lock);
 	if(q.empty()){
+		waitStat = true;
 		uv_cond_wait(&notEmpty, &lock);
 		if(q.empty() || q.front() == NULL){
 			uv_mutex_unlock(&lock);

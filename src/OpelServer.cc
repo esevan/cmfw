@@ -51,6 +51,7 @@ bool OpelSocketList::Select()
 	}
 
 	if(FD_ISSET(op_server->getFd(), &rfs)){
+		comm_log("New client is connecting to the server...");
 		int err;
 		OpelSocket *os = op_server->Accept(&err);
 		if(err != COMM_S_OK){
@@ -63,11 +64,14 @@ bool OpelSocketList::Select()
 		return true;
 	}
 	else{
+		comm_log("Client has sent the message...");
 		for(std::list<OpelSocket *>::iterator it = sockets.begin(); it != sockets.end(); it++){
 			if(FD_ISSET((*it)->getFd(), &rfs)){
 				rqueue->enqueue(*it);
 			}
 		}
+
+		return true;
 	}
 }
 
