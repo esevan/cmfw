@@ -12,9 +12,9 @@ INC = ./inc
 $(OBJ_DIR)/%.o:$(SRC_DIR)/%.cc
 	$(CC) -o $@ -c $< -I$(INC) $(LIB)
 
-__test=OpelMessage OpelSocket OpelServerSocket OpelSCModel OpelServer OpelClient
-_test=$(patsubst %,$(OBJ_DIR)/%.o,$(__test))
-test:$(_test)
+__cmfw=OpelMessage OpelBT OpelSocket OpelServerSocket OpelSCModel OpelServer OpelClient
+_cmfw=$(patsubst %,$(OBJ_DIR)/%.o,$(__cmfw))
+cmfw:$(_cmfw)
 
 .PHONY: clean
 clean:

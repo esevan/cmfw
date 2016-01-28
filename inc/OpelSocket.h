@@ -42,6 +42,7 @@ class OpelSocket
 		//bool isConnected();
 
 		int getFd();
+		uint16_t getId();
 		uint16_t getRefCnt();
 		void get();
 		uint32_t getPayloadSize();

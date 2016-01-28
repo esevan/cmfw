@@ -22,7 +22,7 @@ class OpelSocketList
 		OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue *rq);
 		void Insert(OpelSocket *sock);
 		bool Select();
-		OpelSocket *getSocketById(int sock_id);
+		OpelSocket *getSocketById(uint16_t sock_id);
 };
 
 class OpelServer : public OpelSCModel

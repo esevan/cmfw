@@ -24,6 +24,8 @@ OpelSocketList::OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue
 
 void OpelSocketList::Insert(OpelSocket *sock)
 {
+	static uint16_t sock_id = 0;
+	sock->setId(sock_id++);
 	sockets.push_back(sock);
 	FD_SET(sock->getFd(), &readfds);
 	if(max_fd < sock->getFd()){
@@ -61,6 +63,19 @@ bool OpelSocketList::Select()
 			}
 		}
 	}
+}
+
+OpelSocket *OpelSocketList::getSocketById(uint16_t sock_id)
+{
+	OpelSocket *res = NULL;
+	for(std::list<OpelSocket *>::iterator it = sockets.begin(); it!=sockets.end(); it++){
+		if((*it)->getId() == sock_id){
+			res = *it;
+			break;
+		}
+	}
+
+	return res;
 }
 ////////////////////////////////////////////////////
 

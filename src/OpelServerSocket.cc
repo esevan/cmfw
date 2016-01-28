@@ -1,6 +1,6 @@
 #include <OpelUtil.h>
 #include <OpelServerSocket.h>
-#include <comm_bt.h>
+#include <OpelBT.h>
 #include <bluetooth/rfcomm.h>
 #include <unistd.h>
 #include <string.h>

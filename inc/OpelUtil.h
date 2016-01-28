@@ -34,7 +34,7 @@ inline void _comm_log(const char *format, const char *fileName, const char *func
 }
 #endif
 
-void name2uuid(IN char inputString[], OUT unsigned int outUuid[])
+/*void name2uuid(IN char inputString[], OUT unsigned int outUuid[])
 {
 	int x;
 
@@ -62,6 +62,7 @@ int find_first_zero_bit(unsigned int x)
 
 	return res;
 }
+*/
 enum COMMRESULT
 {
 	COMM_S_OK
@@ -76,4 +77,5 @@ enum COMMRESULT
 		, COMM_E_DISCON
 		, COMM_E_FOPEN
 };
+
 #endif

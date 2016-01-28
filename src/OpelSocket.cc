@@ -1,4 +1,4 @@
-#include <comm_bt.h>
+#include <OpelBT.h>
 #include <OpelUtil.h>
 #include <OpelSocket.h>
 #include <string.h>
@@ -89,6 +89,10 @@ int OpelSocket::getFd()
 	if(sock_fd < 0)
 		return -1;
 	return sock_fd;
+}
+uint16_t OpelSocket::getId()
+{
+	return sock_id;
 }
 uint16_t OpelSocket::getRefCnt()
 {
