@@ -19,7 +19,7 @@ class OpelSocketList
 		OpelReadQueue *rqueue;
 
 	public:
-		OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue *rq);
+		OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue *rq, OpelCommHandler statCb);
 		void Insert(OpelSocket *sock);
 		bool Select();
 		OpelSocket *getSocketById(uint16_t sock_id);

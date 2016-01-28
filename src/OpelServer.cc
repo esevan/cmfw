@@ -10,10 +10,11 @@ static void after_accept_handler(uv_work_t *req, int status);
 
 
 /////////////////////////////OpelSocketList Implementation
-OpelSocketList::OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue *rqueue)
+OpelSocketList::OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue *rqueue, OpelCommHandler statCb)
 {
 	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
 	this->conn_type = conn_type;
+	this->statCb = statCb;
 	op_server = new OpelServerSocket(intf_name, conn_type);
 	if(op_server->init()){
 		comm_log("OpelServer initialized");
@@ -36,7 +37,6 @@ void OpelSocketList::Insert(OpelSocket *sock)
 	if(max_fd < sock->getFd()){
 		max_fd = sock->getFd();
 	}
-	rqueue->enqueue(sock);
 }
 
 bool OpelSocketList::Select()
@@ -54,7 +54,7 @@ bool OpelSocketList::Select()
 		comm_log("New client is connecting to the server...");
 		int err;
 		OpelSocket *os = op_server->Accept(&err);
-		if(err != COMM_S_OK){
+		if(err != COMM_S_OK || os == NULL){
 			comm_log("Accept failed");
 			return false;
 		}
@@ -92,7 +92,7 @@ OpelSocket *OpelSocketList::getSocketById(uint16_t sock_id)
 ///////////////////////////////////////////////////OpelServer Implementation
 OpelServer::OpelServer(char *intf_name, OpelCommHandler defCb, OpelCommHandler statCb) : OpelSCModel(intf_name, defCb, statCb)
 {
-	osl = new OpelSocketList(intf_name, CONN_TYPE_BT, &rqueue);
+	osl = new OpelSocketList(intf_name, CONN_TYPE_BT, &rqueue, statCb);
 	uv_work_t *req = (uv_work_t *)malloc(sizeof(uv_work_t));
 	priv = (void *)req;
 	req->data = (OpelSocketList *)osl;
@@ -142,6 +142,7 @@ static void generic_accept_handler(uv_work_t *req)
 		if(osl->Select()){
 			comm_log("Selected!");
 			if(osl->accepted == true){
+				comm_log("Accepted!");
 				return;
 			}
 		}
@@ -159,6 +160,7 @@ static void after_accept_handler(uv_work_t *req, int status)
 	OpelSocketList *osl = (OpelSocketList *)req->data;
 	if(osl->accepted == true)
 	{
+		comm_log("Call stat cb");
 		OpelMessage op_msg;
 		osl->statCb(&op_msg, STAT_CONNECTED);
 

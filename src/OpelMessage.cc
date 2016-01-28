@@ -277,6 +277,7 @@ void OpelMessage::setData(uint8_t data[], uint32_t len)
 void OpelMessage::setSocket(OpelSocket *op_sock)
 {
 	this->op_socket = op_sock;
+	op_header.initialized = true;
 }
 void OpelMessage::setHeader(OpelHeader &op_head)
 {
