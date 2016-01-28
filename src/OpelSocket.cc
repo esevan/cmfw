@@ -65,6 +65,7 @@ uint16_t OpelSocket::Connect()
 	int res = 0;
 	switch(conn_type){
 		case CONN_TYPE_BT:
+			comm_log("FD : %d\n", sock_fd);
 			res = bt_connect((uint8_t *)intf_name, sock_fd);
 			if(res < 0)
 				res = COMM_E_FAIL;

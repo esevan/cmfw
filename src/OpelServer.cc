@@ -15,7 +15,11 @@ OpelSocketList::OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue
 	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
 	this->conn_type = conn_type;
 	op_server = new OpelServerSocket(intf_name, conn_type);
-	op_server->init();
+	if(op_server->init()){
+		comm_log("OpelServer initialized");
+	}
+	else
+		comm_log("Failed to initialize server");
 	max_fd = op_server->getFd();
 	FD_ZERO(&readfds);
 	FD_SET(op_server->getFd(), &readfds);

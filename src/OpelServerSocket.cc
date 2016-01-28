@@ -16,10 +16,10 @@ OpelServerSocket::OpelServerSocket()
 
 OpelServerSocket::OpelServerSocket(char* intf_name, uint8_t conn_type)
 {
-	conn_type = conn_type;
+	this->conn_type = conn_type;
 	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
 	priv = NULL;
-	init();	
+//	init();	
 }
 
 bool OpelServerSocket::init()
@@ -53,8 +53,10 @@ bool OpelServerSocket::init()
 			return false;
 		}
 	}
-	else
+	else{
+		comm_log("conn_type error");
 		return false;
+	}
 
 	return true;
 }
