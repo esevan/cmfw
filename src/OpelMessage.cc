@@ -270,8 +270,10 @@ void OpelMessage::setData(uint8_t data[], uint32_t len)
 		free(this->data);
 		this->data = NULL;
 	}
-	if(NULL != data)
+	if(NULL == data){
+		this->data = (uint8_t *)malloc(len);
 		memcpy(this->data, data, len);
+	}
 	op_header.initialized = true;
 }
 void OpelMessage::setSocket(OpelSocket *op_sock)
