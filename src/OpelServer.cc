@@ -163,6 +163,7 @@ static void after_accept_handler(uv_work_t *req, int status)
 		comm_log("Call stat cb");
 		OpelMessage op_msg;
 		osl->statCb(&op_msg, STAT_CONNECTED);
+		osl->accepted = false;
 
 		uv_queue_work(uv_default_loop(), req, generic_accept_handler, after_accept_handler);
 	}

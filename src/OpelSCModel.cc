@@ -419,7 +419,7 @@ static void generic_mwrite_handler(uv_work_t *req)
 
 	while(true)
 	{
-		if(ocq->dequeue(&op_msg)){
+		if(!ocq->dequeue(&op_msg)){
 			comm_log("Dequeue unblocked but, stat is not OK");
 			stat = COMM_E_FAIL;
 			break;
@@ -495,7 +495,7 @@ static void generic_fwrite_handler(uv_work_t *req)
 
 	while(true)
 	{
-		if(ocq->dequeue(&op_msg)){
+		if(!ocq->dequeue(&op_msg)){
 			comm_log("Dequeue unblocked but, stat is not OK");
 			stat = COMM_E_FAIL;
 			break;
