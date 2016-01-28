@@ -117,8 +117,7 @@ OpelMessage& OpelMessage::operator=(OpelMessage &arg)
 		op_header = arg.op_header;
 		op_socket = arg.op_socket;
 		if(arg.data != NULL){
-			data = (uint8_t *)malloc(arg.getDataLen() * sizeof(uint8_t));
-			memcpy(data, arg.data, arg.getDataLen());
+			setData(arg.getData(), arg.getDataLen());
 		}
 	}
 }
@@ -270,9 +269,10 @@ void OpelMessage::setData(uint8_t data[], uint32_t len)
 		free(this->data);
 		this->data = NULL;
 	}
-	if(NULL == data){
+	if(NULL != data){
 		this->data = (uint8_t *)malloc(len);
 		memcpy(this->data, data, len);
+		this->setDataLen(len);
 	}
 	op_header.initialized = true;
 }
