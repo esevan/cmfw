@@ -6,6 +6,8 @@ void statCb(OpelMessage *, uint16_t stat);
 static char test_intf[256] = "Test Interface";
 static OpelClient op_client(test_intf, defCb, statCb);
 
+static bool connected = false;
+
 void defCb(OpelMessage *op_msg, uint16_t err)
 {
 	if(err == 0){
@@ -20,7 +22,10 @@ void statCb(OpelMessage *op_msg, uint16_t stat)
 {
 	printf("Client Test: STat Cb called\n");
 	if(stat == STAT_CONNECTED){
-		op_client.SendMsg("HiHi");
+		connected = true;
+	}
+	else if(stat == STAT_DISCON){
+		connected = false;
 	}
 }
 
@@ -29,6 +34,16 @@ int main()
 
 	op_client.Start();
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+
+	while(true)
+	{
+		char buf[1024];
+		scanf("%s", buf);
+		if(connected)
+			op_client.SendMsg(buf);
+		else
+			printf("No connection\n");
+	}
 
 	return 0;
 }
