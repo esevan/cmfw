@@ -13,8 +13,8 @@ class OpelSocketList
 		uint8_t conn_type;
 		OpelServerSocket *op_server;
 		std::list<OpelSocket *>sockets;
-		fd_set readfds;
-		int max_fd;
+		//fd_set readfds;
+		//int max_fd;
 
 		OpelReadQueue *rqueue;
 

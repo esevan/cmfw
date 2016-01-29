@@ -31,8 +31,15 @@ bool OpelClientMonitor::Select()
 {
 	//When read thread is busy, then do busy waiting.
 	while(rqueue->waitStat == false) {}
+
+	if(op_sock->getStat() == STAT_DISCON || op_sock->getStat() == STAT_CONNECTING){
+		comm_log("not connected");
+		return false;
+	}
+
 	fd_set rfs = readfds;
 	FD_SET(op_sock->getFd(), &rfs);
+	
 	comm_log("Start select()");
 	if(select(max_fd+1, &rfs, NULL, NULL, NULL)<0){
 		comm_log("Select error:%s(%d)", strerror(errno), errno);

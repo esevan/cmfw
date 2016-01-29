@@ -370,7 +370,6 @@ static void generic_read_handler(uv_work_t *req)
 	rparam->stat = stat;
 	*(rparam->op_msg) = tmp_msg;
 
-	comm_log("Generichandler ter");
 	return;
 }
 

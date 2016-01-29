@@ -21,9 +21,9 @@ OpelSocketList::OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue
 	}
 	else
 		comm_log("Failed to initialize server");
-	max_fd = op_server->getFd();
-	FD_ZERO(&readfds);
-	FD_SET(op_server->getFd(), &readfds);
+	//max_fd = op_server->getFd();
+	//FD_ZERO(&readfds);
+	//FD_SET(op_server->getFd(), &readfds);
 	this->rqueue = rqueue;
 	accepted = false;
 }
@@ -33,17 +33,35 @@ void OpelSocketList::Insert(OpelSocket *sock)
 	static uint16_t sock_id = 0;
 	sock->setId(sock_id++);
 	sockets.push_back(sock);
-	FD_SET(sock->getFd(), &readfds);
-	if(max_fd < sock->getFd()){
+	//FD_SET(sock->getFd(), &readfds);
+	/*if(max_fd < sock->getFd()){
 		max_fd = sock->getFd();
 	}
+	*/
 }
 
 bool OpelSocketList::Select()
 {
 	//When read thread is busy, then do busy waiting.
 	while(rqueue->waitStat == false) {}
-	fd_set rfs = readfds;
+	fd_set rfs;
+	FD_ZERO(&rfs);
+	FD_SET(op_server->getFd(), &rfs);
+	int max_fd = op_server->getFd();
+	for(std::list<OpelSocket *>::iterator it = sockets.begin(); it != sockets.end(); it++){
+			if((*it)->getStat() == STAT_CONNECTED){
+				FD_SET((*it)->getFd(), &rfs);
+				if(max_fd < (*it)->getFd())
+					max_fd = (*it)->getFd();
+			}
+			else{
+				/*
+				   Code for Removing invalid socket should be placed here
+				   */
+			}
+		}
+
+	//fd_set rfs = readfds;
 	comm_log("Start select()");
 	if(select(max_fd+1, &rfs, NULL, NULL, NULL) < 0){
 		comm_log("Select error:%s(%d)", strerror(errno), errno);
