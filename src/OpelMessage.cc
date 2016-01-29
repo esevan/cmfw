@@ -77,9 +77,9 @@ bool OpelHeader::initToBuff(uint8_t buff[]){
 	memcpy(&buff[0], &tmp_int, 4);
 	tmp_int = htonl(data_len);
 	memcpy(&buff[4], &tmp_int, 4);
-	tmp_short = htonl(type);
+	tmp_short = htons(type);
 	memcpy(&buff[8], &tmp_short, 2);
-	tmp_short = htonl(err);
+	tmp_short = htons(err);
 	memcpy(&buff[10], &tmp_short, 2);
 	tmp_int = htonl(chksum);
 	memcpy(&buff[12], &tmp_int, 4);

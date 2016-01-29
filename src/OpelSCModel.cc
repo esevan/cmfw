@@ -354,6 +354,8 @@ static void generic_read_handler(uv_work_t *req)
 			break;
 		}
 
+		comm_log("Header Info: \n \tdata len : %x\n \tdata type: %d", tmp_msg.getDataLen(), tmp_msg.getType());
+
 		rsize = sock->Read((void *) buff, tmp_msg.getDataLen());
 		if(rsize <= 0){
 			comm_log("Socket closed %u", sock->getFd());
