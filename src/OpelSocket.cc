@@ -17,7 +17,7 @@ OpelSocket::OpelSocket(char *intf_name, uint8_t conn_type)
 	strncpy(this->intf_name, intf_name, MAX_INTF_LEN);
 	this->conn_type = conn_type;
 	sock_fd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
-	stat = 0;
+	stat = STAT_DISCON;
 	ref_cnt = 0;
 }
 
