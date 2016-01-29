@@ -147,6 +147,11 @@ void OpelSocket::setFd(int fd)
 {
 	sock_fd = fd;
 }
+
+void OpelSocket::setStat(uint16_t st)
+{
+	stat = st;
+}
 void OpelSocket::put()
 {
 	ref_cnt--;

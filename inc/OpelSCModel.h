@@ -65,8 +65,6 @@ class OpelSCModel
 		bool Stop();
 		bool Send(OpelMessage *msg);
 
-		//virtual OpelSocket *getSocket(uint16_t sock_id);
-		//virtual void putSocket(uint16_t sock_id);
 };
 
 #endif

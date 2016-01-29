@@ -332,7 +332,6 @@ static void generic_read_handler(uv_work_t *req)
 		OpelSocket *sock = orq->dequeue();
 		if(NULL == sock){
 			stat = COMM_E_FAIL;
-			sock->put();
 			break;
 		}
 		tmp_msg.setSocket(sock);
@@ -343,14 +342,12 @@ static void generic_read_handler(uv_work_t *req)
 		if(rsize <= 0){
 			comm_log("Socket closed %u", sock->getFd());
 			stat = COMM_E_DISCON;
-			sock->put();
 			break;
 		}
 		
 		if(!tmp_msg.initFromBuff(header_buff)){
 			comm_log("Init from buff error");
 			stat = COMM_E_FAIL;
-			sock->put();
 			break;
 		}
 
@@ -358,7 +355,6 @@ static void generic_read_handler(uv_work_t *req)
 		if(rsize <= 0){
 			comm_log("Socket closed %u", sock->getFd());
 			stat = COMM_E_DISCON;
-			sock->put();
 			break;
 		}
 
@@ -395,6 +391,7 @@ static void after_read_handler(uv_work_t *req, int stat)
 	else if(rparam->stat == COMM_E_DISCON)
 	{
 		op_msg->setErr(COMM_E_DISCON);
+		op_msg->getSocket()->setStat(STAT_DISCON);
 		rparam->statCb(op_msg, STAT_DISCON);
 	}
 	else if(rparam->stat == COMM_S_OK)

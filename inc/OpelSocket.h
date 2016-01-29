@@ -51,6 +51,7 @@ class OpelSocket
 		
 		void setFd(int fd);
 		void setId(uint16_t id);
+		void setStat(uint16_t st);
 		void put();
 };
 

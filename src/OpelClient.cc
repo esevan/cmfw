@@ -110,12 +110,14 @@ static void generic_connect_handler(uv_work_t *req)
 	comm_log("Connect handler UP");
 	OpelClientMonitor *ocm = (OpelClientMonitor *)req->data;
 
-	if(*(ocm->connected) == false){
+	if(ocm->getSocket()->getStat() == STAT_DISCON){
 		*(ocm->connected) = ocm->Connect();
 		return;
 	}
-	
-	while(ocm->Select()){}
+
+	if(ocm->getSocket()->getStat() == STAT_CONNECTED){
+		while(ocm->Select()){}
+	}
 
 	return;
 }
@@ -130,10 +132,13 @@ static void after_connect_handler(uv_work_t *req, int status)
 	if(*(ocm->connected) == true){
 		OpelMessage op_msg;
 
+		*(ocm->connected) = false;
 		ocm->statCb(&op_msg, STAT_CONNECTED);
+		ocm->getSocket()->setStat(STAT_CONNECTED);
 		uv_queue_work(uv_default_loop(), req, generic_connect_handler, after_connect_handler);
 	}
 	else{
+		ocm->getSocket()->setStat(STAT_DISCON);
 		ocm->statCb(NULL, STAT_DISCON);
 	}
 	return;
