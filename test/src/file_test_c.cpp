@@ -24,7 +24,7 @@ void statCb(OpelMessage *op_msg, uint16_t stat)
 	if(stat == STAT_CONNECTED){
 		connected = true;
 		printf("Sending file... \n");
-		op_client.SendFile("./oops", "./haps");
+		op_client.SendFile("./oops", "./haps", "piggy backed");
 		op_client.SendMsg("oops --> haps");
 	}
 	else if(stat == STAT_DISCON){

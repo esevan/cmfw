@@ -39,5 +39,9 @@ class OpelClient : public OpelSCModel
 		bool Stop();
 		bool SendMsg(char *str);
 		bool SendFile(char *srcFName, char *destFName);
+		bool SendFile(char *srcFName, char *destFName, char *piggybacking);
+		bool Respond(OpelMessage *msg, char *str);
+		bool Respond(OpelMessage *msg, char *srcFName, char *destFName);
+		bool Respond(OpelMessage *msg, char *srcFName, char *destFName, char *piggybacking);
 };
 #endif

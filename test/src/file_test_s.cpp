@@ -12,12 +12,13 @@ void defCb(OpelMessage *op_msg, uint16_t err)
 {
 	static int a = 0;
 	if(err == 0){
-		printf("Server Test: Default Callback Called\n");
 		if(op_msg->isMsg()){
+		printf("Server Test: Default Callback Called\n");
 		}
 		else if(op_msg->isFile()){
 			if(op_msg->isLastDataOfFile()){
-				printf("op_msg->getDestFName() received from op_msg->getSrcFName()\n");
+			printf("Server Test: Default Callback Called\n");
+				printf("op_msg->getDestFName() received from op_msg->getSrcFName()\n%s", op_msg->getData());
 				op_server.SendFile("./haps", "./hops");
 				op_server.SendMsg("haps --> hops");
 			}
