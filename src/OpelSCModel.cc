@@ -302,7 +302,7 @@ static bool process_file(OpelMessage *op_msg, uint8_t *buff)
 	}
 
 	comm_log("Process File %s(%d[%d]/%d)", op_msg->getDestFName(), op_msg->getOffset(), op_msg->getDataLen(), op_msg->getFSize());
-	FILE *file_p = fopen(op_msg->getDestFName(), "rb");
+	FILE *file_p = fopen(op_msg->getDestFName(), "a+");
 	
 	if(NULL == file_p){
 		comm_log("fopen error");
@@ -361,10 +361,10 @@ static void generic_read_handler(uv_work_t *req)
 			break;
 		}
 
-		if(tmp_msg.getType() & PACKET_TYPE_MSG != 0){
+		if((tmp_msg.getType() & PACKET_TYPE_MSG) != 0){
 			process_msg(&tmp_msg, buff);
 		}
-		else if(tmp_msg.getType() & PACKET_TYPE_FILE != 0){
+		else if((tmp_msg.getType() & PACKET_TYPE_FILE) != 0){
 			process_file(&tmp_msg, buff);
 		}
 
