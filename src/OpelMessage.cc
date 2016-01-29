@@ -286,3 +286,18 @@ void OpelMessage::setHeader(OpelHeader &op_head)
 	op_header = op_head;
 }
 
+bool OpelMessage::isMsg()
+{
+	return ((getType() & PACKET_TYPE_MSG) != 0);
+}
+
+bool OpelMessage::isFile()
+{
+	return ((getType() & PACKET_TYPE_FILE) != 0);
+}
+
+bool OpelMessage::isLastDataOfFile()
+{
+	return (getType() == (PACKET_TYPE_FILE | PACKET_TYPE_SPE)); 
+}
+

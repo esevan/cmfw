@@ -272,7 +272,6 @@ bool OpelSCModel::Stop()
 
 bool OpelSCModel::Send(OpelMessage *msg)
 {
-	comm_log("Type: %d", msg->getType() & PACKET_TYPE_FILE);
 	if((msg->getType() & PACKET_TYPE_MSG) != 0){
 		comm_log("Msg sending");
 		mqueue.enqueue(msg);
@@ -292,6 +291,7 @@ static bool process_msg(OpelMessage *op_msg, uint8_t *buff)
 }
 static bool process_file(OpelMessage *op_msg, uint8_t *buff)
 {
+	comm_log("Process file");
 	if((op_msg->getType() & PACKET_TYPE_SPE) != 0){
 		comm_log("Received File : %s", op_msg->getDestFName());
 		if(op_msg->getDataLen() > 0){
@@ -359,19 +359,22 @@ static void generic_read_handler(uv_work_t *req)
 			stat = COMM_E_FAIL;
 			break;
 		}
+		if(tmp_msg.getDataLen() > 0){
+			rsize = sock->Read((void *) buff, tmp_msg.getDataLen());
+			if(rsize <= 0){
+				comm_log("Socket closed %u", sock->getFd());
+				stat = COMM_E_DISCON;
+				break;
+			}
 
-		rsize = sock->Read((void *) buff, tmp_msg.getDataLen());
-		if(rsize <= 0){
-			comm_log("Socket closed %u", sock->getFd());
-			stat = COMM_E_DISCON;
-			break;
-		}
+			comm_log("Type: %d", tmp_msg.getType());
 
-		if((tmp_msg.getType() & PACKET_TYPE_MSG) != 0){
-			process_msg(&tmp_msg, buff);
-		}
-		else if((tmp_msg.getType() & PACKET_TYPE_FILE) != 0){
-			process_file(&tmp_msg, buff);
+			if((tmp_msg.getType() & PACKET_TYPE_MSG) != 0){
+				process_msg(&tmp_msg, buff);
+			}
+			else if((tmp_msg.getType() & PACKET_TYPE_FILE) != 0){
+				process_file(&tmp_msg, buff);
+			}
 		}
 
 	}while(0);
@@ -537,8 +540,7 @@ static void generic_fwrite_handler(uv_work_t *req)
 					BT_MAX_DAT_LEN-COMM_HEADER_SIZE, fp_file);
 			if(rbytes == 0 && feof(fp_file))
 			{
-				comm_log("Last msg gogo");
-				op_msg.setType(PACKET_TYPE_SPE | PACKET_TYPE_FILE);
+				op_msg.setType((PACKET_TYPE_SPE | PACKET_TYPE_FILE));
 				op_msg.setOffset(acc_bytes);
 				if(NULL != op_msg.getData()){
 					op_msg.setDataLen(strlen((char*)op_msg.getData())+1 );

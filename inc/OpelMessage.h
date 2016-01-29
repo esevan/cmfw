@@ -65,6 +65,10 @@ class OpelMessage
 		uint8_t *getData();
 		OpelSocket *getSocket();
 
+		bool isMsg();
+		bool isFile();
+		bool isLastDataOfFile();
+
 		void setReqid(uint32_t arg);
 		void setDataLen(uint32_t len);
 		void setType(uint16_t type);
