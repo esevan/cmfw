@@ -302,12 +302,18 @@ static bool process_file(OpelMessage *op_msg, uint8_t *buff)
 	}
 
 	comm_log("Process File %s(%d[%d]/%d)", op_msg->getDestFName(), op_msg->getOffset(), op_msg->getDataLen(), op_msg->getFSize());
-	FILE *file_p = fopen(op_msg->getDestFName(), "a+");
+	FILE *file_p = NULL;
+	if(op_msg->getOffset() == 0)
+		file_p = fopen(op_msg->getDestFName(), "w+");
+	else
+		file_p = fopen(op_msg->getDestFName(), "a");
 	
 	if(NULL == file_p){
 		comm_log("fopen error");
 		return false;
 	}
+
+	fseek(file_p, op_msg->getOffset(), SEEK_SET);
 	
 	if(op_msg->getDataLen() != fwrite(buff, 1, op_msg->getDataLen(), file_p)){
 		comm_log("Fwrite error : %s", op_msg->getDestFName());

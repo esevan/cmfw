@@ -90,7 +90,7 @@ bool OpelHeader::initToBuff(uint8_t buff[]){
 		tmp_int = htonl(fsize);
 		memcpy(&buff[64], &tmp_int, 4);
 		tmp_int = htonl(offset);
-		memcpy(&tmp_int, &buff[68], 4);
+		memcpy(&buff[68], &tmp_int, 4);
 	}
 
 	return true;
