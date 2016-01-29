@@ -84,7 +84,7 @@ bool OpelHeader::initToBuff(uint8_t buff[]){
 	tmp_int = htonl(chksum);
 	memcpy(&buff[12], &tmp_int, 4);
 
-	if(0 != PACKET_TYPE_FILE & type){
+	if(0 != (PACKET_TYPE_FILE & type)){
 		memcpy(&buff[16], srcFName, FNAME_LEN);
 		memcpy(&buff[40], destFName, FNAME_LEN);
 		tmp_int = htonl(fsize);
