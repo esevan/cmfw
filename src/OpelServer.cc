@@ -182,7 +182,6 @@ bool OpelServer::SendMsg(char *str, int sock_id)
 		comm_log("No sock_id %x exists", sock_id);
 		return false;
 	}
-	op_sock->get();
 	op_msg.setSocket(op_sock);
 	op_msg.setData((uint8_t *)str, strlen(str)+1);
 	op_msg.setType(PACKET_TYPE_MSG);

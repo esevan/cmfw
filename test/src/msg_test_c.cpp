@@ -26,6 +26,7 @@ void statCb(OpelMessage *op_msg, uint16_t stat)
 	printf("Client Test: STat Cb called\n");
 	if(stat == STAT_CONNECTED){
 		connected = true;
+		op_client.SendMsg("First");
 	}
 	else if(stat == STAT_DISCON){
 		connected = false;

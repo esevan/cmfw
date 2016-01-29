@@ -63,7 +63,6 @@ bool OpelCommQueue::enqueue(OpelMessage *msg)
 		comm_log("Memory Allocation failed");
 	}
 	(*op_msg) = *msg;
-	comm_log("%s(%x-%d) = %s(%x-%d)?", op_msg->getData(), op_msg->getData(), op_msg->getDataLen(), msg->getData(), msg->getData(), msg->getDataLen());
 
 	uv_mutex_lock(&lock);
 	q.push_back(op_msg);
@@ -354,8 +353,6 @@ static void generic_read_handler(uv_work_t *req)
 			sock->put();
 			break;
 		}
-
-		comm_log("Header Info: \n \tdata len : %x\n \tdata type: %d", tmp_msg.getDataLen(), tmp_msg.getType());
 
 		rsize = sock->Read((void *) buff, tmp_msg.getDataLen());
 		if(rsize <= 0){
