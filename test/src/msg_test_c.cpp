@@ -13,6 +13,7 @@ void defCb(OpelMessage *op_msg, uint16_t err)
 	if(err == 0){
 		printf("Client Test: Default Callback called\n");
 		printf("%s \n", op_msg->getData());
+		op_client.SendMsg("Okshdfiodshjfklj");
 	}
 	else
 		printf("Error happens");
@@ -34,7 +35,7 @@ int main()
 
 	op_client.Start();
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
-
+/*
 	while(true)
 	{
 		char buf[1024];
@@ -44,6 +45,7 @@ int main()
 		else
 			printf("No connection\n");
 	}
+	*/
 
 	return 0;
 }
