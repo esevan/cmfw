@@ -100,6 +100,7 @@ uint16_t OpelSocket::getRefCnt()
 void OpelSocket::get()
 {
 	ref_cnt++;
+	comm_log("OpelSocket Get() %d -> %d", ref_cnt-1, ref_cnt);
 }
 uint32_t OpelSocket::getPayloadSize()
 {
@@ -149,4 +150,5 @@ void OpelSocket::setFd(int fd)
 void OpelSocket::put()
 {
 	ref_cnt--;
+	comm_log("OpelSocket Put() %d -> %d", ref_cnt+1, ref_cnt);
 }

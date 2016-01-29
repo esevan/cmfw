@@ -337,7 +337,7 @@ static void generic_read_handler(uv_work_t *req)
 		}
 		tmp_msg.setSocket(sock);
 		memset((void *)header_buff, 0, COMM_HEADER_SIZE);
-		memset((void *)buff, 0, BT_MAX_DAT_LEN);
+		memset((void *)buff, 0, BT_MAX_DAT_LEN-COMM_HEADER_SIZE);
 		comm_log("Reading header...");
 		ssize_t rsize = sock->Read((void *)header_buff, COMM_HEADER_SIZE);
 		if(rsize <= 0){
@@ -375,6 +375,8 @@ static void generic_read_handler(uv_work_t *req)
 
 	rparam->stat = stat;
 	*(rparam->op_msg) = tmp_msg;
+
+	comm_log("Generichandler ter");
 	return;
 }
 
