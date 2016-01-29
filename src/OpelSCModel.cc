@@ -57,6 +57,7 @@ bool OpelCommQueue::enqueue(OpelMessage *msg)
 		comm_log("msg NULL");
 		return false;
 	}
+	msg->getSocket()->get();
 	OpelMessage *op_msg = new OpelMessage();
 	if(NULL == op_msg){
 		comm_log("Memory Allocation failed");
