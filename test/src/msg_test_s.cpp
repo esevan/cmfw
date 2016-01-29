@@ -10,10 +10,12 @@ static bool connected = false;
 
 void defCb(OpelMessage *op_msg, uint16_t err)
 {
+	static int a = 0;
 	if(err == 0){
 		printf("Server Test: Default Callback Called\n");
 		printf("%s \n", op_msg->getData());
-		op_server.SendMsg("hisdlkfjsdlfksdflksfdjlksdjfk");
+		if(a++ < 10)
+			op_server.SendMsg("hisdlkfjsdlfksdflksfdjlksdjfk");
 	}
 }
 void statCb(OpelMessage *op_msg, uint16_t stat)
