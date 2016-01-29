@@ -23,6 +23,7 @@ void statCb(OpelMessage *op_msg, uint16_t stat)
 	printf("Client Test: STat Cb called\n");
 	if(stat == STAT_CONNECTED){
 		connected = true;
+		printf("Sending file... \n");
 		op_client.SendFile("./oops", "./haps");
 	}
 	else if(stat == STAT_DISCON){

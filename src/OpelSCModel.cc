@@ -272,10 +272,13 @@ bool OpelSCModel::Stop()
 
 bool OpelSCModel::Send(OpelMessage *msg)
 {
-	if(msg->getType() & PACKET_TYPE_MSG != 0){
+	comm_log("Type: %d", msg->getType() & PACKET_TYPE_FILE);
+	if((msg->getType() & PACKET_TYPE_MSG) != 0){
+		comm_log("Msg sending");
 		mqueue.enqueue(msg);
 	}
-	else if(msg->getType() & PACKET_TYPE_FILE != 0){
+	else if((msg->getType() & PACKET_TYPE_FILE) != 0){
+		comm_log("File sending");
 		fqueue.enqueue(msg);
 	}
 }
@@ -560,7 +563,7 @@ static void generic_fwrite_handler(uv_work_t *req)
 			acc_bytes += rbytes;
 			op_msg.initToBuff(buff);
 
-			if(rbytes != op_sock->Write((void *)buff, COMM_HEADER_SIZE + rbytes)){
+			if(COMM_HEADER_SIZE+rbytes != op_sock->Write((void *)buff, COMM_HEADER_SIZE + rbytes)){
 				comm_log("socket write error %d", COMM_HEADER_SIZE + rbytes);
 				stat = COMM_E_FAIL;
 				break;

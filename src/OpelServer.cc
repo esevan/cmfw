@@ -50,6 +50,7 @@ bool OpelSocketList::Select()
 	int max_fd = op_server->getFd();
 	for(std::list<OpelSocket *>::iterator it = sockets.begin(); it != sockets.end(); it++){
 			if((*it)->getStat() == STAT_CONNECTED){
+				comm_log("Select added %d", (*it)->getFd());
 				FD_SET((*it)->getFd(), &rfs);
 				if(max_fd < (*it)->getFd())
 					max_fd = (*it)->getFd();
