@@ -292,7 +292,7 @@ static bool process_msg(OpelMessage *op_msg, uint8_t *buff)
 }
 static bool process_file(OpelMessage *op_msg, uint8_t *buff)
 {
-	if(op_msg->getType() & PACKET_TYPE_SPE != 0){
+	if((op_msg->getType() & PACKET_TYPE_SPE) != 0){
 		comm_log("Received File : %s", op_msg->getDestFName());
 		if(op_msg->getDataLen() > 0){
 			op_msg->setData(buff, op_msg->getDataLen());
@@ -537,10 +537,11 @@ static void generic_fwrite_handler(uv_work_t *req)
 					BT_MAX_DAT_LEN-COMM_HEADER_SIZE, fp_file);
 			if(rbytes == 0 && feof(fp_file))
 			{
+				comm_log("Last msg gogo");
 				op_msg.setType(PACKET_TYPE_SPE | PACKET_TYPE_FILE);
 				op_msg.setOffset(acc_bytes);
 				if(NULL != op_msg.getData()){
-					op_msg.setDataLen(strlen((char*)op_msg.getData() + 1));
+					op_msg.setDataLen(strlen((char*)op_msg.getData())+1 );
 					memcpy((void *)(buff+COMM_HEADER_SIZE), (void *)op_msg.getData(),\
 							op_msg.getDataLen());
 				}
