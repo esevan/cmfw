@@ -33,6 +33,7 @@ bool OpelClientMonitor::Select()
 	while(rqueue->waitStat == false) {}
 	fd_set rfs = readfds;
 	FD_SET(op_sock->getFd(), &rfs);
+	comm_log("Start select()");
 	if(select(max_fd+1, &rfs, NULL, NULL, NULL)<0){
 		comm_log("Select error:%s(%d)", strerror(errno), errno);
 
