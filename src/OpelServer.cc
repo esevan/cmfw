@@ -25,7 +25,7 @@ OpelSocketList::OpelSocketList(char *intf_name, uint8_t conn_type, OpelReadQueue
 	//FD_ZERO(&readfds);
 	//FD_SET(op_server->getFd(), &readfds);
 	this->rqueue = rqueue;
-	accepted = false;
+	accepted = -1;
 }
 
 void OpelSocketList::Insert(OpelSocket *sock)
@@ -76,8 +76,9 @@ bool OpelSocketList::Select()
 			comm_log("Accept failed");
 			return false;
 		}
+		os->setStat(STAT_CONNECTED);
 		Insert(os);
-		accepted = true;
+		accepted = os->getId();
 
 		return true;
 	}
@@ -159,7 +160,7 @@ static void generic_accept_handler(uv_work_t *req)
 	while(true){
 		if(osl->Select()){
 			comm_log("Selected!");
-			if(osl->accepted == true){
+			if(osl->accepted != -1){
 				comm_log("Accepted!");
 				return;
 			}
@@ -176,12 +177,13 @@ static void after_accept_handler(uv_work_t *req, int status)
 		return;
 
 	OpelSocketList *osl = (OpelSocketList *)req->data;
-	if(osl->accepted == true)
+	if(osl->accepted != -1)
 	{
 		comm_log("Call stat cb");
 		OpelMessage op_msg;
+		op_msg.setSocket(osl->getSocketById(osl->accepted));
 		osl->statCb(&op_msg, STAT_CONNECTED);
-		osl->accepted = false;
+		osl->accepted = -1;
 
 		uv_queue_work(uv_default_loop(), req, generic_accept_handler, after_accept_handler);
 	}

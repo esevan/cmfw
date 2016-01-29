@@ -24,7 +24,7 @@ class OpelSocketList
 		bool Select();
 		OpelSocket *getSocketById(uint16_t sock_id);
 		OpelCommHandler statCb;
-		bool accepted;
+		int accepted;
 };
 
 class OpelServer : public OpelSCModel
