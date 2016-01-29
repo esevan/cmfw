@@ -52,7 +52,7 @@ bool OpelHeader::initFromBuff(uint8_t buff[]){
 	err = ntohs(tmp_short);
 	memcpy(&tmp_int, &buff[12], 4);
 	chksum = ntohl(tmp_int);
-	if(0 != PACKET_TYPE_FILE & type){
+	if(0 != (PACKET_TYPE_FILE & type)){
 		memcpy(srcFName, &buff[16], FNAME_LEN);
 		memcpy(destFName, &buff[40], FNAME_LEN);
 		memcpy(&tmp_int, &buff[64], 4);
