@@ -12,10 +12,13 @@ void defCb(OpelMessage *op_msg, uint16_t err)
 {
 	static int a = 0;
 	if(err == 0){
+		char buf[256];
 		printf("Server Test: Default Callback Called\n");
+		scanf("%s", buf);
 		printf("%s \n", op_msg->getData());
-		if(a++ < 10)
-			op_server.SendMsg("hisdlkfjsdlfksdflksfdjlksdjfk");
+		//if(a++ < 10)
+			//op_server.SendMsg("hisdlkfjsdlfksdflksfdjlksdjfk");
+		op_server.SendMsg(buf);
 	}
 }
 void statCb(OpelMessage *op_msg, uint16_t stat)

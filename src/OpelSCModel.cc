@@ -394,6 +394,7 @@ static void after_read_handler(uv_work_t *req, int stat)
 	if(UV_ECANCELED == stat){
 		return;
 	}
+	//uv_queue_work(uv_default_loop(), req, generic_read_handler, after_read_handler);
 	if(rparam->stat == COMM_E_FAIL)
 	{
 		op_msg->setErr(COMM_E_FAIL);
