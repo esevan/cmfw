@@ -15,7 +15,7 @@ void defCb(OpelMessage *op_msg, uint16_t err)
 		printf("Client Test: Default Callback called\n");
 		printf("%s \n", op_msg->getData());
 		if(a++ < 10)
-			op_client.SendMsg("Okshdfiodshjfklj");
+			op_client.Respond(op_msg, "Okshdfiodshjfklj");
 	}
 	else
 		printf("Error happens");

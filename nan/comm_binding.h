@@ -13,5 +13,7 @@
 
 NAN_METHOD(OpenChannel);
 NAN_METHOD(SendMsg);
+NAN_METHOD(SendFile);
+NAN_METHOD(Respond);
 
 #endif  // EXAMPLES_ASYNC_PI_ESTIMATE_ASYNC_H_

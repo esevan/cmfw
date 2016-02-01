@@ -43,6 +43,10 @@ class OpelServer : public OpelSCModel
 		bool Stop();
 		bool SendMsg(char *str, int sock_id = 0);
 		bool SendFile(char *srcFName, char *destFName, int sock_id = 0);
+		bool SendFile(char *srcFName, char *destFName, char *piggybacking, int sock_id = 0);
+		bool Respond(OpelMessage *msg, char *str);
+		bool Respond(OpelMessage *msg, char *srcFName, char *destFName);
+		bool Respond(OpelMessage *msg, char *srcFName, char *destFName, char *piggybacking);
 };
 
 
