@@ -1,5 +1,7 @@
 #include <OpelServer.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 void defCb(OpelMessage *, uint16_t err);
 void statCb(OpelMessage *, uint16_t stat);
@@ -8,9 +10,12 @@ static OpelServer op_server(test_intf, defCb, statCb);
 
 static bool connected = false;
 
+static time_val base, curr;
+static bool based_inserted;
+
 void defCb(OpelMessage *op_msg, uint16_t err)
 {
-	static int a = 0;
+	/*static int a = 0;
 	if(err == 0){
 		char buf[256];
 		printf("Server Test: Default Callback Called\n");
@@ -20,6 +25,7 @@ void defCb(OpelMessage *op_msg, uint16_t err)
 			//op_server.SendMsg("hisdlkfjsdlfksdflksfdjlksdjfk");
 		op_server.SendMsg(buf);
 	}
+	*/
 }
 void statCb(OpelMessage *op_msg, uint16_t stat)
 {
